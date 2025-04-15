@@ -10,16 +10,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => { // Make the lis
   if (info.menuItemId === "summarizeText" && info.selectionText) {
     console.log("Selected text:", info.selectionText);
     // --- CHANGE THIS LINE --- 
-    const serverUrl = 'http://10.88.0.3:5000/summarize'; // Use the accessible IP address
-    // --- END CHANGE --- 
+    const serverUrl = `http://10.88.0.3:5000/summarize?text=${encodeURIComponent(info.selectionText)}`; // Use the accessible IP address
+    // --- END CHANGE ---
 
     try {
       const response = await fetch(serverUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text: info.selectionText }) // Send text in JSON body
+        method: 'GET',
       });
 
       if (!response.ok) {

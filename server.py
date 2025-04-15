@@ -22,16 +22,12 @@ except Exception as e:
     # Handle the error appropriately, maybe exit or provide a default behavior
     model = None # Ensure model is None if configuration fails
 
-@app.route('/summarize', methods=['POST'])
+@app.route('/summarize', methods=['GET'])
 def summarize_text():
     if not model:
         return jsonify({"error": "Gemini API not configured properly."}), 500
 
-    if not request.is_json:
-        return jsonify({"error": "Request must be JSON"}), 400
-
-    data = request.get_json()
-    text_to_summarize = data.get('text')
+    text_to_summarize = request.args.get('text')
 
     if not text_to_summarize:
         return jsonify({"error": "Missing 'text' parameter in JSON body"}), 400
