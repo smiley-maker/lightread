@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LightRead",
   "version": "1.0",
-  "description": "Summarizes highlighted text on web pages using AI.",
+  "description": "With just a click, LightRead uses AI to instantly summarize any selected text on the web. Whether you're skimming news articles, doing research, or just curious about a long blog post, LightRead helps you get to the point — fast.",
   "permissions": [
     "activeTab",
     "scripting",
