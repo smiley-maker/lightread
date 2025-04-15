@@ -9,7 +9,9 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => { // Make the listener async
   if (info.menuItemId === "summarizeText" && info.selectionText) {
     console.log("Selected text:", info.selectionText);
-    const serverUrl = 'http://127.0.0.1:5000/summarize'; // Your Flask server address
+    // --- CHANGE THIS LINE --- 
+    const serverUrl = 'http://10.88.0.3:5000/summarize'; // Use the accessible IP address
+    // --- END CHANGE --- 
 
     try {
       const response = await fetch(serverUrl, {
