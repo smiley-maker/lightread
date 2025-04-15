@@ -10,7 +10,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => { // Make the lis
   if (info.menuItemId === "summarizeText" && info.selectionText) {
     console.log("Selected text:", info.selectionText);
     // --- CHANGE THIS LINE --- 
-    const serverUrl = `http://10.88.0.3:5000/summarize?text=${encodeURIComponent(info.selectionText)}`; // Use the accessible IP address
+    const serverUrl = `http://192.168.68.112:3000/summarize?text=${encodeURIComponent(info.selectionText)}`; // Use the accessible IP address
     // --- END CHANGE ---
 
     try {

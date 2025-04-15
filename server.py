@@ -70,4 +70,4 @@ def home():
 if __name__ == '__main__':
     # Use 0.0.0.0 to make it accessible on the network
     # Change port if 5000 is already in use
-    app.run(host='0.0.0.0', port=5000, debug=True) # Enable debug for development
+    app.run(host='0.0.0.0', port=3000, debug=True) # Enable debug for development
