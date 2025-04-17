@@ -11,6 +11,8 @@ __pycache__/
 # IDE/Editor specific files
 .vscode/
 .idea/
+.idx/
+.venv/
 
 # Operating System specific files
 .DS_Store
