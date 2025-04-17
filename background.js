@@ -2,14 +2,20 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "summarizeText",
     title: "Summarize with LightRead",
-    contexts: ["selection"] // Only show when text is selected
+    contexts: ["selection"]
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.error("Error creating context menu:", chrome.runtime.lastError);
+    } else {
+      console.log("Context menu created successfully!");
+    }
   });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizeText" && info.selectionText) {
     console.log("Selected text:", info.selectionText);
-    const serverUrl = `http://10.88.0.3:5000/summarize?text=${encodeURIComponent(info.selectionText)}`;
+    const serverUrl = `http://192.168.68.112:3000/summarize?text=${encodeURIComponent(info.selectionText)}`;
 
     try {
       const response = await fetch(serverUrl, {
@@ -28,71 +34,136 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 
       const data = await response.json();
       const summary = data.summary;
+      console.log(summary);
+      const logoUrl = chrome.runtime.getURL("logo.png"); // Get logo URL here
 
+      // Define the function to be injected
+      const injectionFunction = (summaryText, logoUrl) => {
+        console.log("Injection function executed with summary:", summaryText);
+
+        // Remove any existing summary popups
+        const existingPopup = document.getElementById('lightread-popup');
+        if (existingPopup) {
+          console.log("Existing popup found, removing...");
+          existingPopup.remove();
+        }
+
+        // Create the popup container
+        const popup = document.createElement('div');
+        popup.id = 'lightread-popup';
+        popup.style.position = 'fixed';
+        popup.style.top = '20px';
+        popup.style.right = '20px';
+        popup.style.backgroundColor = '#f8f9fa';
+        popup.style.border = '1px solid #ced4da';
+        popup.style.borderRadius = '5px';
+        popup.style.padding = '15px';
+        popup.style.zIndex = '10000';
+        popup.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+        popup.style.fontFamily = 'sans-serif';
+        popup.style.fontSize = '14px';
+        popup.style.color = '#212529';
+        popup.style.maxWidth = '500px';
+
+        // Create and append the logo image
+        const logoImg = document.createElement('img');
+        logoImg.src = logoUrl;
+        logoImg.alt = 'LightRead Logo';
+        logoImg.id = 'lightread-logo';
+        logoImg.style.width = '200px';
+        logoImg.style.marginBottom = '10px';
+        logoImg.style.display = 'block';
+        popup.appendChild(logoImg);
+
+        // Create and append the summary text container
+        const summaryTextElement = document.createElement('div');
+        summaryTextElement.id = 'lightread-summary-text';
+        summaryTextElement.style.marginBottom = '15px';
+        summaryTextElement.style.maxHeight = '200px';
+        summaryTextElement.style.overflowY = 'auto';
+        summaryTextElement.textContent = summaryText;
+        popup.appendChild(summaryTextElement);
+
+        // Create and append the copy button
+        const copyButton = document.createElement('button');
+        copyButton.id = 'lightread-copy-button';
+        copyButton.style.backgroundColor = '#BAA5FF';
+        copyButton.style.color = 'black';
+        copyButton.style.border = 'none';
+        copyButton.style.borderRadius = '4px';
+        copyButton.style.padding = '8px 12px';
+        copyButton.style.cursor = 'pointer';
+        copyButton.style.fontSize = '12px';
+        copyButton.style.marginRight = '5px';
+        copyButton.textContent = 'Copy';
+        popup.appendChild(copyButton);
+
+        // Create and append the close button
+        const closeButton = document.createElement('button');
+        closeButton.id = 'lightread-close-button';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '8px';
+        closeButton.style.right = '8px';
+        closeButton.style.background = 'none';
+        closeButton.style.border = 'none';
+        closeButton.style.fontSize = '16px';
+        closeButton.style.cursor = 'pointer';
+        closeButton.style.color = '#6c757d';
+        closeButton.style.padding = '0 5px';
+        closeButton.textContent = 'X';
+        popup.appendChild(closeButton);
+
+        // Append the popup to the body
+        document.body.appendChild(popup);
+        console.log("Popup appended to body", popup);
+
+        const copyButtonElement = document.getElementById('lightread-copy-button');
+        const closeButtonElement = document.getElementById('lightread-close-button');
+
+        if (copyButtonElement) {
+          copyButtonElement.addEventListener('click', () => {
+            navigator.clipboard.writeText(summaryText)
+              .then(() => {
+                copyButtonElement.textContent = 'Copied!'; // Provide feedback
+                setTimeout(() => { copyButtonElement.textContent = 'Copy'; }, 2000); // Reset after 2s
+              })
+              .catch(err => {
+                console.error('Failed to copy summary: ', err);
+                copyButtonElement.textContent = 'Error';
+              });
+          });
+        } else {
+           console.error("Could not find copy button");
+        }
+
+        if (closeButtonElement) {
+          closeButtonElement.addEventListener('click', () => {
+            popup.remove();
+          });
+        } else {
+          console.error("Could not find close button");
+        }
+      };
+
+      // Execute the injection function
+      console.log("Executing the injection function...");
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: displaySummary,
-        args: [summary]
+        function: injectionFunction,
+        args: [summary, logoUrl] // Pass summary and logoUrl as arguments
       });
+      console.log("Finished execution of the injection function...")
 
     } catch (error) {
       console.error("Failed to fetch summary:", error);
+      // Optionally, inform the user about the error using an alert or the same popup mechanism
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: displaySummary,
-        args: [`Error: Could not get summary. ${error.message}`]
+        function: (errMsg) => { alert(errMsg); }, // Simple alert for error
+        args: [`LightRead Error: ${error.message}`]
       });
     }
   }
 });
 
-function displaySummary(summary) {
-  // Inline HTML for the popup
-  const popupHTML = `
-    <div id="lightread-popup" style="position: fixed; top: 20px; right: 20px; background-color: #f8f9fa; border: 1px solid #ced4da; border-radius: 5px; padding: 10px; z-index: 10000; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-      <img src="${chrome.runtime.getURL("logo.png")}" alt="LightRead Logo" id="lightread-logo" style="width: 100px; margin-bottom: 10px;">
-      <div id="lightread-summary-text" style="margin-bottom: 10px;"></div>
-      <button id="lightread-copy-button" style="background-color: #007bff; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;">Copy</button>
-      <button id="lightread-close-button" style="position: absolute; top: 5px; right: 5px; background: none; border: none; font-size: 12px; cursor: pointer;">X</button>
-    </div>
-  `;
-
-  function injectPopup(popupHTML, summaryText) {
-    // Remove any existing summary popups
-    const existingPopup = document.getElementById('lightread-popup');
-    if (existingPopup) {
-      existingPopup.remove();
-    }
-
-    const container = document.createElement('div');
-    container.innerHTML = popupHTML;
-    const popup = container.firstChild;
-    document.body.appendChild(popup);
-
-    const summaryTextElement = document.getElementById('lightread-summary-text');
-    const copyButton = document.getElementById('lightread-copy-button');
-    const closeButton = document.getElementById('lightread-close-button');
-
-    summaryTextElement.textContent = summaryText;
-
-    copyButton.addEventListener('click', () => {
-      navigator.clipboard.writeText(summaryText)
-        .then(() => {
-          console.log('Summary copied to clipboard!');
-        })
-        .catch(err => {
-          console.error('Failed to copy summary: ', err);
-        });
-    });
-
-    closeButton.addEventListener('click', () => {
-      popup.remove();
-    });
-  }
-
-  chrome.scripting.executeScript({
-    target: { tabId: chrome.tabs.getCurrent().then(tab => tab.id) },
-    function: injectPopup,
-    args: [popupHTML, summary]
-  });
-}
+// The separate displaySummary and injectPopup functions are no longer needed here
