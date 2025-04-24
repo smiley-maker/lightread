@@ -1,169 +1,419 @@
 // Move background.js to extension directory
 
+// Constants
+const SERVER_URL = 'http://localhost:3000';
+
+// Store the current summary data
+let currentSummaryData = null;
+
+// Auth state management
+let authState = {
+  isLoggedIn: false,
+  token: null,
+  user: null
+};
+
+// Load auth state from storage
+chrome.storage.local.get(['token', 'user'], (result) => {
+  if (result.token && result.user) {
+    authState = {
+      isLoggedIn: true,
+      token: result.token,
+      user: result.user
+    };
+    console.log('Loaded auth state from storage:', authState);
+  }
+});
+
+// Listen for auth state changes from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'AUTH_STATE_CHANGE') {
+    authState = request.authState;
+    console.log('Auth state updated:', authState);
+  }
+});
+
+// Create context menu on install
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "summarizeText",
     title: "Summarize with LightRead",
     contexts: ["selection"]
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error("Error creating context menu:", chrome.runtime.lastError);
-    } else {
-      console.log("Context menu created successfully!");
-    }
   });
 });
 
+// Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizeText" && info.selectionText) {
-    console.log("Selected text:", info.selectionText);
-    const serverUrl = `http://192.168.68.112:3000/summarize?text=${encodeURIComponent(info.selectionText)}`;
-
     try {
-      const response = await fetch(serverUrl, {
-        method: 'GET',
+      // Check auth state
+      if (!authState.isLoggedIn) {
+        // Try to load auth state from storage
+        const { token, user } = await chrome.storage.local.get(['token', 'user']);
+        if (token && user) {
+          authState = {
+            isLoggedIn: true,
+            token: token,
+            user: user
+          };
+        } else {
+          throw new Error('Please login to use LightRead');
+        }
+      }
+
+      // Get user settings for summary preferences
+      const settings = await getUserSettings();
+      const summaryLength = settings?.preferred_summary_length || 'medium';
+
+      const response = await fetch(`${SERVER_URL}/summarize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.token}`
+        },
+        body: JSON.stringify({
+          text: info.selectionText,
+          source_url: tab.url,
+          length: summaryLength
+        })
       });
 
       if (!response.ok) {
-        let errorMsg = `Error from server: ${response.status} ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMsg += ` - ${errorData.error || 'No specific error message provided.'}`;
-        } catch (e) {
+        if (response.status === 401) {
+          // Token expired, try to refresh
+          const refreshed = await refreshToken();
+          if (refreshed) {
+            // Retry the request with new token
+            return chrome.contextMenus.onClicked.dispatch(info, tab);
+          }
+          throw new Error('Session expired. Please login again.');
         }
-        throw new Error(errorMsg);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate summary');
       }
 
       const data = await response.json();
-      const summary = data.summary;
-      console.log(summary);
-      const logoUrl = chrome.runtime.getURL("logo.png"); // Get logo URL here
-
-      // Define the function to be injected
-      const injectionFunction = (summaryText, logoUrl) => {
-        console.log("Injection function executed with summary:", summaryText);
-
-        // Remove any existing summary popups
-        const existingPopup = document.getElementById('lightread-popup');
-        if (existingPopup) {
-          console.log("Existing popup found, removing...");
-          existingPopup.remove();
-        }
-
-        // Create the popup container
-        const popup = document.createElement('div');
-        popup.id = 'lightread-popup';
-        popup.style.position = 'fixed';
-        popup.style.top = '20px';
-        popup.style.right = '20px';
-        popup.style.backgroundColor = '#f8f9fa';
-        popup.style.border = '1px solid #ced4da';
-        popup.style.borderRadius = '5px';
-        popup.style.padding = '15px';
-        popup.style.zIndex = '10000';
-        popup.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-        popup.style.fontFamily = 'sans-serif';
-        popup.style.fontSize = '14px';
-        popup.style.color = '#212529';
-        popup.style.maxWidth = '500px';
-
-        // Create and append the logo image
-        const logoImg = document.createElement('img');
-        logoImg.src = logoUrl;
-        logoImg.alt = 'LightRead Logo';
-        logoImg.id = 'lightread-logo';
-        logoImg.style.width = '200px';
-        logoImg.style.marginBottom = '10px';
-        logoImg.style.display = 'block';
-        popup.appendChild(logoImg);
-
-        // Create and append the summary text container
-        const summaryTextElement = document.createElement('div');
-        summaryTextElement.id = 'lightread-summary-text';
-        summaryTextElement.style.marginBottom = '15px';
-        summaryTextElement.style.maxHeight = '200px';
-        summaryTextElement.style.overflowY = 'auto';
-        summaryTextElement.textContent = summaryText;
-        popup.appendChild(summaryTextElement);
-
-        // Create and append the copy button
-        const copyButton = document.createElement('button');
-        copyButton.id = 'lightread-copy-button';
-        copyButton.style.backgroundColor = '#BAA5FF';
-        copyButton.style.color = 'black';
-        copyButton.style.border = 'none';
-        copyButton.style.borderRadius = '4px';
-        copyButton.style.padding = '8px 12px';
-        copyButton.style.cursor = 'pointer';
-        copyButton.style.fontSize = '12px';
-        copyButton.style.marginRight = '5px';
-        copyButton.textContent = 'Copy';
-        popup.appendChild(copyButton);
-
-        // Create and append the close button
-        const closeButton = document.createElement('button');
-        closeButton.id = 'lightread-close-button';
-        closeButton.style.position = 'absolute';
-        closeButton.style.top = '8px';
-        closeButton.style.right = '8px';
-        closeButton.style.background = 'none';
-        closeButton.style.border = 'none';
-        closeButton.style.fontSize = '16px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.style.color = '#6c757d';
-        closeButton.style.padding = '0 5px';
-        closeButton.textContent = 'X';
-        popup.appendChild(closeButton);
-
-        // Append the popup to the body
-        document.body.appendChild(popup);
-        console.log("Popup appended to body", popup);
-
-        const copyButtonElement = document.getElementById('lightread-copy-button');
-        const closeButtonElement = document.getElementById('lightread-close-button');
-
-        if (copyButtonElement) {
-          copyButtonElement.addEventListener('click', () => {
-            navigator.clipboard.writeText(summaryText)
-              .then(() => {
-                copyButtonElement.textContent = 'Copied!'; // Provide feedback
-                setTimeout(() => { copyButtonElement.textContent = 'Copy'; }, 2000); // Reset after 2s
-              })
-              .catch(err => {
-                console.error('Failed to copy summary: ', err);
-                copyButtonElement.textContent = 'Error';
-              });
-          });
-        } else {
-           console.error("Could not find copy button");
-        }
-
-        if (closeButtonElement) {
-          closeButtonElement.addEventListener('click', () => {
-            popup.remove();
-          });
-        } else {
-          console.error("Could not find close button");
-        }
+      currentSummaryData = {
+        ...data,
+        original_text: info.selectionText,
+        source_url: tab.url,
+        character_count: info.selectionText.length
       };
 
-      // Execute the injection function
-      console.log("Executing the injection function...");
+      // Show the summary popup
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: injectionFunction,
-        args: [summary, logoUrl] // Pass summary and logoUrl as arguments
+        function: showSummaryPopup,
+        args: [
+          data.summary, 
+          chrome.runtime.getURL("logo.png"), 
+          currentSummaryData,
+          authState.token,
+          SERVER_URL
+        ]
       });
-      console.log("Finished execution of the injection function...")
 
     } catch (error) {
-      console.error("Failed to fetch summary:", error);
-      // Optionally, inform the user about the error using an alert or the same popup mechanism
+      console.error("Error:", error);
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        function: (errMsg) => { alert(errMsg); }, // Simple alert for error
-        args: [`LightRead Error: ${error.message}`]
+        function: showErrorPopup,
+        args: [error.message]
       });
     }
+  }
+});
+
+// Function to refresh the auth token
+async function refreshToken() {
+  try {
+    const response = await fetch(`${SERVER_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authState.token}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to refresh token');
+    }
+
+    const data = await response.json();
+    authState.token = data.token;
+    await chrome.storage.local.set({ token: data.token });
+    return true;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    // Clear auth state on refresh failure
+    authState = { isLoggedIn: false, token: null, user: null };
+    await chrome.storage.local.remove(['token', 'user']);
+    return false;
+  }
+}
+
+// Function to get user settings
+async function getUserSettings() {
+  try {
+    const response = await fetch(`${SERVER_URL}/user/settings`, {
+      headers: {
+        'Authorization': `Bearer ${authState.token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const refreshed = await refreshToken();
+        if (refreshed) {
+          return getUserSettings();
+        }
+      }
+      throw new Error('Failed to get user settings');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting user settings:', error);
+    return null;
+  }
+}
+
+// Function to show the summary popup
+function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
+  // Remove any existing popups
+  const existingPopup = document.getElementById('lightread-popup');
+  if (existingPopup) {
+    existingPopup.remove();
+  }
+
+  // Create popup container
+  const popup = document.createElement('div');
+  popup.id = 'lightread-popup';
+  popup.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: var(--background-color, #ffffff);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    max-width: 400px;
+    width: 90%;
+    color: var(--text-color, #333);
+  `;
+
+  // Add header with logo and close button
+  const header = document.createElement('div');
+  header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;';
+  
+  // Add logo
+  const logo = document.createElement('img');
+  logo.id = 'lightread-logo';
+  logo.style.cssText = 'width: 120px;';
+  header.appendChild(logo);
+
+  // Add close button
+  const closeButton = document.createElement('button');
+  closeButton.textContent = '×';
+  closeButton.style.cssText = `
+    background: none;
+    border: none;
+    color: var(--text-color, #333);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+  `;
+  closeButton.onclick = () => popup.remove();
+  header.appendChild(closeButton);
+
+  popup.appendChild(header);
+
+  // Add summary text
+  const summaryText = document.createElement('div');
+  summaryText.textContent = summary;
+  summaryText.style.cssText = `
+    margin-bottom: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.5;
+  `;
+  popup.appendChild(summaryText);
+
+  // Add buttons container
+  const buttonsContainer = document.createElement('div');
+  buttonsContainer.style.cssText = 'display: flex; gap: 8px;';
+
+  // Add copy button
+  const copyButton = document.createElement('button');
+  copyButton.textContent = 'Copy';
+  copyButton.style.cssText = `
+    background-color: var(--primary-color, #BAA5FF);
+    color: black;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    flex: 1;
+  `;
+  copyButton.onclick = () => {
+    navigator.clipboard.writeText(summary);
+    copyButton.textContent = 'Copied!';
+    setTimeout(() => copyButton.textContent = 'Copy', 2000);
+  };
+
+  // Add save button
+  const saveButton = document.createElement('button');
+  saveButton.textContent = 'Save';
+  saveButton.style.cssText = `
+    background-color: var(--secondary-color, #4CAF50);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    flex: 1;
+  `;
+  saveButton.onclick = async () => {
+    try {
+      console.log('Saving summary with data:', summaryData);
+      console.log('Using token:', token ? 'Token present' : 'No token');
+
+      const response = await fetch(`${serverUrl}/summaries/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(summaryData)
+      });
+
+      console.log('Save response status:', response.status);
+      const responseData = await response.json();
+      console.log('Save response data:', responseData);
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.log('Token expired, attempting refresh...');
+          // Send message to background script to refresh token
+          chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' }, async (response) => {
+            if (response.success) {
+              console.log('Token refreshed, retrying save...');
+              saveButton.onclick();
+            } else {
+              throw new Error('Failed to refresh token');
+            }
+          });
+          return;
+        }
+        throw new Error(responseData.error || 'Failed to save summary');
+      }
+
+      saveButton.textContent = 'Saved!';
+      setTimeout(() => saveButton.textContent = 'Save', 2000);
+    } catch (error) {
+      console.error('Error saving summary:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+      saveButton.textContent = 'Error';
+      setTimeout(() => saveButton.textContent = 'Save', 2000);
+    }
+  };
+
+  buttonsContainer.appendChild(copyButton);
+  buttonsContainer.appendChild(saveButton);
+  popup.appendChild(buttonsContainer);
+
+  // Add CSS variables for theme support
+  const style = document.createElement('style');
+  style.textContent = `
+    :root {
+      --primary-color: #BAA5FF;
+      --secondary-color: #4CAF50;
+      --text-color: #333;
+      --border-color: #e0e0e0;
+      --background-color: #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --text-color: #ffffff;
+        --border-color: #444;
+        --background-color: #1a1a1a;
+      }
+      #lightread-logo {
+        content: url('logo_light.png');
+      }
+    }
+  `;
+  document.head.appendChild(style);
+
+  // Set initial logo
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  logo.src = prefersDark ? 'logo_light.png' : 'logo.png';
+
+  // Listen for theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    logo.src = e.matches ? 'logo_light.png' : 'logo.png';
+  });
+
+  document.body.appendChild(popup);
+}
+
+// Function to show error popup
+function showErrorPopup(errorMessage) {
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #ffebee;
+    border: 1px solid #ffcdd2;
+    border-radius: 8px;
+    padding: 16px;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    max-width: 400px;
+    width: 90%;
+  `;
+
+  const message = document.createElement('div');
+  message.textContent = errorMessage;
+  message.style.cssText = 'color: #c62828; margin-bottom: 12px;';
+
+  const closeButton = document.createElement('button');
+  closeButton.textContent = 'Close';
+  closeButton.style.cssText = `
+    background-color: #c62828;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+  `;
+  closeButton.onclick = () => popup.remove();
+
+  popup.appendChild(message);
+  popup.appendChild(closeButton);
+  document.body.appendChild(popup);
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'SESSION_UPDATE') {
+    // Store the session and token in extension storage
+    chrome.storage.session.set({
+      session: message.session,
+      jwtToken: message.jwtToken
+    });
+  } else if (message.type === 'SESSION_CLEAR') {
+    // Clear extension storage
+    chrome.storage.session.clear();
   }
 });

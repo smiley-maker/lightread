@@ -1,0 +1,229 @@
+.dashboard-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.dashboard-title {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #333;
+}
+
+.billing-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.plan-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.plan-card {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+
+.plan-card.active {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  border-color: #8b5cf6;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(124, 58, 237, 0.2);
+}
+
+
+.plan-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.plan-card.active .plan-title {
+  color: white;
+}
+
+.plan-price {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.plan-card.active .plan-price {
+  color: white;
+}
+
+.price {
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.plan-card.active .price {
+  color: white;
+}
+
+.period {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.plan-card.active .period {
+  color: white;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: #333;
+}
+
+.plan-features.active {
+  color: white;
+}
+
+.plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+}
+
+.feature-check {
+  width: 24px;
+  height: 24px;
+  background: rgba(124, 58, 237, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+  font-size: 1rem;
+}
+
+.plan-card.active .feature-check {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.plan-button {
+  margin-top: auto;
+  padding: 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-plan {
+  background: #7c3aed;
+  color: white;
+}
+
+.select-plan:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.active {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  color: white;
+  cursor: default;
+}
+
+.plan-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.payment-info {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.payment-info.active {
+  background: #7c3aed;
+  color: white;
+}
+
+.payment-info h3 {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.payment-info.active h3 {
+  color: white;
+}
+
+.cancel-subscription {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.cancel-subscription:hover {
+  background: #b91c1c;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem;
+  color: #666;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #7c3aed;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.settings-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.settings-message.success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.settings-message.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+} 
