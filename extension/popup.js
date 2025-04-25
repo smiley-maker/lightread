@@ -101,7 +101,7 @@ async function loadUserData() {
                 // Populate summary length options from enum
                 const summaryLengthSelect = document.getElementById('summaryLength');
                 summaryLengthSelect.innerHTML = options.summary_length.map(length => 
-                    `<option value="${length}">${length.charAt(0).toUpperCase() + length.slice(1)}</option>`
+                    `<option value="${length}">${length}</option>`
                 ).join('');
                 summaryLengthSelect.value = settings.preferred_summary_length;
 
@@ -184,7 +184,7 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
     try {
         const { token } = await chrome.storage.local.get('token');
         if (!token) {
-            alert('Please login to save settings');
+            document.getElementById('settingsMessage').textContent = 'Please login to save settings';
             return;
         }
 
@@ -205,17 +205,58 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save settings');
+            if (response.status === 401) {
+                // Try to refresh token
+                chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' }, async (response) => {
+                    if (response?.success) {
+                        // Retry save with new token
+                        const { token: newToken } = await chrome.storage.local.get('token');
+                        if (newToken) {
+                            const retryResponse = await fetch(`${SERVER_URL}/user/settings`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${newToken}`
+                                },
+                                body: JSON.stringify(settings)
+                            });
+                            
+                            if (!retryResponse.ok) {
+                                throw new Error('Failed to save settings after token refresh');
+                            }
+                        }
+                    } else {
+                        throw new Error('Session expired. Please login again.');
+                    }
+                });
+                return;
+            }
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to save settings');
         }
 
+        // Apply theme immediately after successful save
         applyTheme(settings.theme);
-        document.getElementById('settingsMessage').textContent = 'Settings saved successfully';
+        
+        // Show success message
+        const settingsMessage = document.getElementById('settingsMessage');
+        settingsMessage.textContent = 'Settings saved successfully';
+        settingsMessage.style.color = 'var(--success-color, #4CAF50)';
         setTimeout(() => {
-            document.getElementById('settingsMessage').textContent = '';
+            settingsMessage.textContent = '';
         }, 3000);
+
+        // Notify background script of theme change
+        chrome.runtime.sendMessage({ 
+            type: 'THEME_CHANGE', 
+            theme: settings.theme 
+        });
+
     } catch (error) {
         console.error('Error saving settings:', error);
-        document.getElementById('settingsMessage').textContent = 'Failed to save settings';
+        const settingsMessage = document.getElementById('settingsMessage');
+        settingsMessage.textContent = error.message || 'Failed to save settings';
+        settingsMessage.style.color = 'var(--error-color, #f44336)';
     }
 });
 

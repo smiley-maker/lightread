@@ -255,7 +255,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
 
   // Add buttons container
   const buttonsContainer = document.createElement('div');
-  buttonsContainer.style.cssText = 'display: flex; gap: 8px;';
+  buttonsContainer.style.cssText = 'display: flex; gap: 8px; margin-top: 16px;';
 
   // Add copy button
   const copyButton = document.createElement('button');
@@ -271,7 +271,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
     flex: 1;
   `;
   copyButton.onclick = () => {
-    navigator.clipboard.writeText(summary);
+    navigator.clipboard.writeText(summaryText.textContent);
     copyButton.textContent = 'Copied!';
     setTimeout(() => copyButton.textContent = 'Copy', 2000);
   };
@@ -297,7 +297,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(summaryData)
+        body: JSON.stringify(currentSummaryData)
       });
 
       if (!response.ok) {
@@ -327,6 +327,197 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
 
   buttonsContainer.appendChild(copyButton);
   buttonsContainer.appendChild(saveButton);
+
+  // Add pro controls if user is pro (before buttons)
+  const addProControls = async () => {
+    try {
+      console.log('Initializing pro controls...');
+      // Get user limits to check if pro
+      const limitsResponse = await fetch(`${serverUrl}/user/limits`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!limitsResponse.ok) throw new Error('Failed to get user limits');
+      
+      const limits = await limitsResponse.json();
+      console.log('User limits:', limits);
+      const isPro = limits.plan_type === 'pro' || limits.plan_type === 'enterprise';
+      console.log('Is pro user:', isPro);
+      
+      if (isPro) {
+        console.log('Fetching enum options...');
+        // Get available options
+        const optionsResponse = await fetch(`${serverUrl}/rpc/get_enum_values`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!optionsResponse.ok) throw new Error('Failed to get options');
+        
+        const options = await optionsResponse.json();
+        console.log('Available options:', options);
+        
+        // Create controls container
+        const controlsContainer = document.createElement('div');
+        controlsContainer.style.cssText = `
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin: 16px 0;
+          padding: 12px;
+          background-color: var(--background-color-secondary, #f5f5f5);
+          border-radius: 6px;
+        `;
+
+        // Create selects container
+        const selectsContainer = document.createElement('div');
+        selectsContainer.style.cssText = `
+          display: flex;
+          gap: 12px;
+        `;
+
+        // Create tone control
+        const toneGroup = document.createElement('div');
+        toneGroup.style.cssText = 'flex: 1;';
+        
+        const toneLabel = document.createElement('label');
+        toneLabel.textContent = 'Tone';
+        toneLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
+        
+        const toneSelect = document.createElement('select');
+        toneSelect.style.cssText = `
+          width: 100%;
+          padding: 6px;
+          border: 1px solid var(--border-color, #e0e0e0);
+          border-radius: 4px;
+          background-color: var(--background-color, #ffffff);
+          color: var(--text-color, #333);
+        `;
+        
+        // Add tone options
+        const toneOptions = options.find(o => o.enum_name === 'summary_tone')?.enum_values || [];
+        toneOptions.forEach(tone => {
+          const option = document.createElement('option');
+          option.value = tone;
+          option.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
+          toneSelect.appendChild(option);
+        });
+
+        // Create difficulty control
+        const difficultyGroup = document.createElement('div');
+        difficultyGroup.style.cssText = 'flex: 1;';
+        
+        const difficultyLabel = document.createElement('label');
+        difficultyLabel.textContent = 'Difficulty';
+        difficultyLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
+        
+        const difficultySelect = document.createElement('select');
+        difficultySelect.style.cssText = `
+          width: 100%;
+          padding: 6px;
+          border: 1px solid var(--border-color, #e0e0e0);
+          border-radius: 4px;
+          background-color: var(--background-color, #ffffff);
+          color: var(--text-color, #333);
+        `;
+        
+        // Add difficulty options
+        const difficultyOptions = options.find(o => o.enum_name === 'summary_difficulty')?.enum_values || [];
+        difficultyOptions.forEach(difficulty => {
+          const option = document.createElement('option');
+          option.value = difficulty;
+          option.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+          difficultySelect.appendChild(option);
+        });
+
+        // Create update button
+        const updateButton = document.createElement('button');
+        updateButton.textContent = 'Update Summary';
+        updateButton.style.cssText = `
+          background-color: var(--primary-color, #BAA5FF);
+          color: black;
+          border: none;
+          border-radius: 4px;
+          padding: 8px 16px;
+          cursor: pointer;
+          font-size: 14px;
+          margin-top: 8px;
+          width: 100%;
+        `;
+
+        // Add regenerate function
+        const regenerateSummary = async (tone, difficulty) => {
+          try {
+            summaryText.textContent = 'Generating new summary...';
+            updateButton.disabled = true;
+            updateButton.style.opacity = '0.7';
+            
+            const response = await fetch(`${serverUrl}/summarize`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                text: summaryData.original_text,
+                override_tone: tone,
+                override_difficulty: difficulty
+              })
+            });
+
+            if (!response.ok) throw new Error('Failed to generate summary');
+            
+            const data = await response.json();
+            summaryText.textContent = data.summary;
+            
+            // Update currentSummaryData with new summary
+            currentSummaryData = {
+              ...summaryData,
+              summary: data.summary
+            };
+          } catch (error) {
+            console.error('Error regenerating summary:', error);
+            summaryText.textContent = 'Failed to generate new summary. Please try again.';
+          } finally {
+            updateButton.disabled = false;
+            updateButton.style.opacity = '1';
+          }
+        };
+
+        // Add click handler for update button
+        updateButton.onclick = () => regenerateSummary(toneSelect.value, difficultySelect.value);
+
+        // Remove the change handlers from selects since we now have a button
+        toneSelect.onchange = null;
+        difficultySelect.onchange = null;
+
+        // Assemble controls
+        toneGroup.appendChild(toneLabel);
+        toneGroup.appendChild(toneSelect);
+        difficultyGroup.appendChild(difficultyLabel);
+        difficultyGroup.appendChild(difficultySelect);
+        
+        selectsContainer.appendChild(toneGroup);
+        selectsContainer.appendChild(difficultyGroup);
+        
+        controlsContainer.appendChild(selectsContainer);
+        controlsContainer.appendChild(updateButton);
+        
+        // Insert controls before buttons
+        popup.appendChild(controlsContainer);
+        console.log('Pro controls added successfully');
+      }
+    } catch (error) {
+      console.error('Error setting up pro controls:', error);
+    }
+  };
+
+  // Add buttons last
   popup.appendChild(buttonsContainer);
 
   // Add CSS variables for theme support
@@ -336,14 +527,27 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       --primary-color: #BAA5FF;
       --secondary-color: #4CAF50;
       --text-color: #333;
+      --text-color-secondary: #666;
       --border-color: #e0e0e0;
       --background-color: #ffffff;
+      --background-color-secondary: #f5f5f5;
     }
 
     [data-theme="dark"] {
       --text-color: #ffffff;
+      --text-color-secondary: #aaaaaa;
       --border-color: #444;
       --background-color: #1a1a1a;
+      --background-color-secondary: #2a2a2a;
+    }
+
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-size: 8px;
+      padding-right: 24px;
     }
   `;
   document.head.appendChild(style);
@@ -404,6 +608,9 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   });
 
   document.body.appendChild(popup);
+  
+  // Initialize pro controls
+  addProControls();
 }
 
 // Function to show error popup

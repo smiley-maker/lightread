@@ -312,6 +312,16 @@ def summarize_text():
         user_limits = get_user_limits(user_id)
         is_pro = user_limits['plan_type'] in ['pro', 'enterprise']
 
+        # Check for override parameters (only for pro users)
+        if is_pro:
+            override_tone = data.get('override_tone')
+            override_difficulty = data.get('override_difficulty')
+            
+            if override_tone:
+                settings['summary_tone'] = override_tone
+            if override_difficulty:
+                settings['summary_difficulty'] = override_difficulty
+
         # Generate summary using Gemini
         if not model:
             return jsonify({
@@ -493,10 +503,20 @@ def update_user_settings(current_user):
     try:
         data = request.get_json()
         
-        # Validate settings
+        # Get the authenticated Supabase client for enum validation
+        auth_supabase = get_authenticated_supabase(request.headers.get('Authorization').split(' ')[1])
+        
+        # Get valid enum values
+        enum_values = auth_supabase.rpc('get_enum_values').execute()
+        if not enum_values.data:
+            raise Exception("Failed to get enum values for validation")
+            
+        # Create validation map from enum values
         valid_settings = {
-            'preferred_summary_length': ['short', 'medium', 'long'],
-            'theme': ['light', 'dark', 'system']
+            'preferred_summary_length': [v for item in enum_values.data if item['enum_name'] == 'summary_length' for v in item['enum_values']],
+            'theme': ['light', 'dark', 'system'],
+            'summary_tone': [v for item in enum_values.data if item['enum_name'] == 'summary_tone' for v in item['enum_values']],
+            'summary_difficulty': [v for item in enum_values.data if item['enum_name'] == 'summary_difficulty' for v in item['enum_values']]
         }
         
         for key, value in data.items():
