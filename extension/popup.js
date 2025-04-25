@@ -33,6 +33,52 @@ document.getElementById('closeButton').addEventListener('click', () => {
     window.close();
 });
 
+// Function to fetch dropdown options
+async function fetchDropdownOptions(token) {
+    try {
+        // Get enum values from Supabase
+        const response = await fetch(`${SERVER_URL}/rpc/get_enum_values`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch enum values: ${response.status}`);
+        }
+
+        const enumData = await response.json();
+        
+        // Process the enum values into our options format
+        const options = {
+            summary_length: [],
+            theme_type: [],
+            summary_tone: [],
+            summary_difficulty: []
+        };
+
+        // Map the enum data to our options
+        enumData.forEach(item => {
+            if (item.enum_name === 'summary_length') {
+                options.summary_length = item.enum_values;
+            } else if (item.enum_name === 'theme_type') {
+                options.theme_type = item.enum_values;
+            } else if (item.enum_name === 'summary_tone') {
+                options.summary_tone = item.enum_values;
+            } else if (item.enum_name === 'summary_difficulty') {
+                options.summary_difficulty = item.enum_values;
+            }
+        });
+
+        return options;
+    } catch (error) {
+        console.error('Error fetching dropdown options:', error);
+        return null;
+    }
+}
+
 // Load user settings and usage
 async function loadUserData() {
     try {
@@ -48,9 +94,70 @@ async function loadUserData() {
 
         if (settingsResponse.ok) {
             const settings = await settingsResponse.json();
-            document.getElementById('summaryLength').value = settings.preferred_summary_length;
-            document.getElementById('theme').value = settings.theme;
-            applyTheme(settings.theme);
+            
+            // Load dropdown options
+            const options = await fetchDropdownOptions(token);
+            if (options) {
+                // Populate summary length options from enum
+                const summaryLengthSelect = document.getElementById('summaryLength');
+                summaryLengthSelect.innerHTML = options.summary_length.map(length => 
+                    `<option value="${length}">${length.charAt(0).toUpperCase() + length.slice(1)}</option>`
+                ).join('');
+                summaryLengthSelect.value = settings.preferred_summary_length;
+
+                // Populate theme options from enum
+                const themeSelect = document.getElementById('theme');
+                themeSelect.innerHTML = options.theme_type.map(theme => 
+                    `<option value="${theme}">${theme.charAt(0).toUpperCase() + theme.slice(1)}</option>`
+                ).join('');
+                themeSelect.value = settings.theme;
+
+                // Populate summary tone options from enum
+                const summaryToneSelect = document.getElementById('summaryTone');
+                summaryToneSelect.innerHTML = options.summary_tone.map(tone => 
+                    `<option value="${tone}">${tone.charAt(0).toUpperCase() + tone.slice(1)}</option>`
+                ).join('');
+                summaryToneSelect.value = settings.summary_tone;
+
+                // Populate summary difficulty options from enum
+                const summaryDifficultySelect = document.getElementById('summaryDifficulty');
+                summaryDifficultySelect.innerHTML = options.summary_difficulty.map(difficulty => 
+                    `<option value="${difficulty}">${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</option>`
+                ).join('');
+                summaryDifficultySelect.value = settings.summary_difficulty;
+
+                applyTheme(settings.theme);
+            }
+        }
+
+        // Load user limits (includes plan type)
+        const limitsResponse = await fetch(`${SERVER_URL}/user/limits`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (limitsResponse.ok) {
+            const limits = await limitsResponse.json();
+            // Store the plan type and daily limit for later use
+            window.userPlan = {
+                type: limits.plan_type,
+                dailyLimit: limits.daily_summaries
+            };
+            
+            // Update plan text in account tab
+            document.getElementById('userPlan').textContent = limits.plan_type.charAt(0).toUpperCase() + limits.plan_type.slice(1);
+            
+            // Show/hide pro-only settings and upgrade button
+            const proOnlyElements = document.querySelectorAll('.pro-only');
+            const upgradeButton = document.getElementById('upgradeButton');
+            if (limits.plan_type === 'pro') {
+                proOnlyElements.forEach(el => el.style.display = 'block');
+                upgradeButton.style.display = 'none';
+            } else {
+                proOnlyElements.forEach(el => el.style.display = 'none');
+                upgradeButton.style.display = 'block';
+            }
         }
 
         // Load usage
@@ -62,10 +169,10 @@ async function loadUserData() {
 
         if (usageResponse.ok) {
             const usage = await usageResponse.json();
-            console.log(usage);
-            const progress = (usage.summaries_count / 5) * 100; // Assuming 5 is the free tier limit
+            const dailyLimit = window.userPlan?.dailyLimit || 5; // Fallback to 5 if not loaded
+            const progress = (usage.summaries_count / dailyLimit) * 100;
             document.getElementById('usageProgress').style.width = `${progress}%`;
-            document.getElementById('usageText').textContent = `${usage.summaries_count}/5 summaries used today`;
+            document.getElementById('usageText').textContent = `${usage.summaries_count}/${dailyLimit} summaries used today`;
         }
     } catch (error) {
         console.error('Error loading user data:', error);
@@ -83,7 +190,9 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
 
         const settings = {
             preferred_summary_length: document.getElementById('summaryLength').value,
-            theme: document.getElementById('theme').value
+            theme: document.getElementById('theme').value,
+            summary_tone: document.getElementById('summaryTone').value,
+            summary_difficulty: document.getElementById('summaryDifficulty').value
         };
 
         const response = await fetch(`${SERVER_URL}/user/settings`, {
@@ -118,7 +227,10 @@ document.getElementById('upgradeButton').addEventListener('click', () => {
 
 // Theme change listener
 document.getElementById('theme').addEventListener('change', (e) => {
-    applyTheme(e.target.value);
+    const theme = e.target.value;
+    applyTheme(theme);
+    // Send theme change to background script
+    chrome.runtime.sendMessage({ type: 'THEME_CHANGE', theme });
 });
 
 // System theme change listener
@@ -126,6 +238,8 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     const theme = document.getElementById('theme').value;
     if (theme === 'system') {
         applyTheme('system');
+        // Send theme change to background script
+        chrome.runtime.sendMessage({ type: 'THEME_CHANGE', theme: 'system' });
     }
 });
 

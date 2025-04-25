@@ -30,6 +30,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'AUTH_STATE_CHANGE') {
     authState = request.authState;
     console.log('Auth state updated:', authState);
+  } else if (request.type === 'THEME_CHANGE') {
+    // Update theme for all open popups
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: updateTheme,
+          args: [request.theme]
+        });
+      });
+    });
   }
 });
 
@@ -280,9 +291,6 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   `;
   saveButton.onclick = async () => {
     try {
-      console.log('Saving summary with data:', summaryData);
-      console.log('Using token:', token ? 'Token present' : 'No token');
-
       const response = await fetch(`${serverUrl}/summaries/save`, {
         method: 'POST',
         headers: {
@@ -292,17 +300,11 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
         body: JSON.stringify(summaryData)
       });
 
-      console.log('Save response status:', response.status);
-      const responseData = await response.json();
-      console.log('Save response data:', responseData);
-
       if (!response.ok) {
         if (response.status === 401) {
-          console.log('Token expired, attempting refresh...');
           // Send message to background script to refresh token
           chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' }, async (response) => {
             if (response.success) {
-              console.log('Token refreshed, retrying save...');
               saveButton.onclick();
             } else {
               throw new Error('Failed to refresh token');
@@ -310,17 +312,14 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
           });
           return;
         }
-        throw new Error(responseData.error || 'Failed to save summary');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save summary');
       }
 
       saveButton.textContent = 'Saved!';
       setTimeout(() => saveButton.textContent = 'Save', 2000);
     } catch (error) {
       console.error('Error saving summary:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
       saveButton.textContent = 'Error';
       setTimeout(() => saveButton.textContent = 'Save', 2000);
     }
@@ -341,26 +340,67 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       --background-color: #ffffff;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --text-color: #ffffff;
-        --border-color: #444;
-        --background-color: #1a1a1a;
-      }
-      #lightread-logo {
-        content: url('logo_light.png');
-      }
+    [data-theme="dark"] {
+      --text-color: #ffffff;
+      --border-color: #444;
+      --background-color: #1a1a1a;
     }
   `;
   document.head.appendChild(style);
 
-  // Set initial logo
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  logo.src = prefersDark ? 'logo_light.png' : 'logo.png';
+  // Get user's theme setting from Supabase
+  fetch(`${serverUrl}/user/settings`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Failed to fetch theme settings');
+    }
+    return response.json();
+  })
+  .then(settings => {
+    const theme = settings.theme;
+    
+    // Apply theme based on user's saved preference
+    if (theme === 'dark') {
+      document.body.setAttribute('data-theme', 'dark');
+      logo.src = chrome.runtime.getURL('logo_light.png');
+    } else if (theme === 'system') {
+      // Only use system preference if theme is set to 'system'
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.body.setAttribute('data-theme', 'dark');
+        logo.src = chrome.runtime.getURL('logo_light.png');
+      } else {
+        document.body.removeAttribute('data-theme');
+        logo.src = chrome.runtime.getURL('logo.png');
+      }
+    } else {
+      // Default to light theme
+      document.body.removeAttribute('data-theme');
+      logo.src = chrome.runtime.getURL('logo.png');
+    }
 
-  // Listen for theme changes
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    logo.src = e.matches ? 'logo_light.png' : 'logo.png';
+    // Listen for system theme changes only if theme is set to system
+    if (theme === 'system') {
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        if (e.matches) {
+          document.body.setAttribute('data-theme', 'dark');
+          logo.src = chrome.runtime.getURL('logo_light.png');
+        } else {
+          document.body.removeAttribute('data-theme');
+          logo.src = chrome.runtime.getURL('logo.png');
+        }
+      });
+    }
+  })
+  .catch(error => {
+    console.error('Error getting theme settings:', error);
+    // Default to light theme on error
+    document.body.removeAttribute('data-theme');
+    logo.src = chrome.runtime.getURL('logo.png');
   });
 
   document.body.appendChild(popup);
@@ -403,6 +443,19 @@ function showErrorPopup(errorMessage) {
   popup.appendChild(message);
   popup.appendChild(closeButton);
   document.body.appendChild(popup);
+}
+
+// Function to update theme in popup
+function updateTheme(theme) {
+  if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.body.setAttribute('data-theme', 'dark');
+    const logo = document.getElementById('lightread-logo');
+    if (logo) logo.src = chrome.runtime.getURL('logo_light.png');
+  } else {
+    document.body.removeAttribute('data-theme');
+    const logo = document.getElementById('lightread-logo');
+    if (logo) logo.src = chrome.runtime.getURL('logo.png');
+  }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

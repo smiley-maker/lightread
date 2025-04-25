@@ -30,7 +30,7 @@
     "128": "icon128.png"
   },
   "web_accessible_resources": [{
-    "resources": ["logo.png"],
+    "resources": ["logo.png", "logo_light.png"],
     "matches": ["<all_urls>"]
   }]
 }

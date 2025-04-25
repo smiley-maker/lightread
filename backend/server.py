@@ -300,17 +300,17 @@ def summarize_text():
                 'current': summaries_count
             }), 429
 
-        # Get user settings for summary length
+        # Get user settings for summary preferences
         settings_result = auth_supabase.from_('user_settings').select('*').eq('user_id', user_id).execute()
-        settings = settings_result.data[0] if settings_result.data else {'preferred_summary_length': 'medium'}
-        summary_length = settings.get('preferred_summary_length', 'medium')
-        
-        # Map summary length to instructions
-        length_instructions = {
-            'short': 'Provide a very concise summary in 1-2 sentences.',
-            'medium': 'Provide a balanced summary in 2-3 sentences.',
-            'long': 'Provide a detailed summary in 3-4 sentences.'
+        settings = settings_result.data[0] if settings_result.data else {
+            'preferred_summary_length': '2-3 sentences (medium)',
+            'summary_tone': 'neutral',
+            'summary_difficulty': 'medium'
         }
+
+        # Get user's plan type
+        user_limits = get_user_limits(user_id)
+        is_pro = user_limits['plan_type'] in ['pro', 'enterprise']
 
         # Generate summary using Gemini
         if not model:
@@ -318,7 +318,20 @@ def summarize_text():
                 "error": "Summarization service is not available. Please check server configuration."
             }), 503
 
-        prompt = f"""Please summarize the following text. {length_instructions.get(summary_length, length_instructions['medium'])}
+        # Extract the length from the preferred_summary_length value
+        length = settings['preferred_summary_length'].split(' (')[0]  # Gets "2-3 sentences" from "2-3 sentences (medium)"
+
+        # Build prompt based on user's plan type
+        if is_pro:
+            prompt = f"""Please summarize the following text in {length}.
+Use a {settings['summary_tone']} tone and target a {settings['summary_difficulty']} comprehension level.
+
+Text to summarize:
+---
+{text}
+---"""
+        else:
+            prompt = f"""Please summarize the following text in {length}.
 
 Text to summarize:
 ---
@@ -512,6 +525,24 @@ def update_user_settings(current_user):
     except Exception as e:
         print(f"Error updating settings: {e}")
         return jsonify({"error": f"Failed to update settings: {e}"}), 500
+
+@app.route('/rpc/get_enum_values', methods=['POST'])
+@token_required
+def get_enum_values(current_user):
+    try:
+        # Get the authenticated Supabase client
+        auth_supabase = get_authenticated_supabase(request.headers.get('Authorization').split(' ')[1])
+        
+        # Get enum values from the database
+        result = auth_supabase.rpc('get_enum_values').execute()
+        
+        if not result.data:
+            raise Exception("Failed to get enum values")
+            
+        return jsonify(result.data), 200
+    except Exception as e:
+        print(f"Error getting enum values: {e}")
+        return jsonify({"error": f"Failed to get enum values: {e}"}), 500
 
 @app.route('/')
 def home():

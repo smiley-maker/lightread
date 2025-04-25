@@ -216,21 +216,27 @@
             <div class="settings-option">
                 <label for="summaryLength">Preferred Summary Length</label>
                 <select id="summaryLength">
-                    <option value="short">Short</option>
-                    <option value="medium">Medium</option>
-                    <option value="long">Long</option>
                 </select>
             </div>
             <div class="settings-option">
                 <label for="theme">Theme</label>
                 <select id="theme">
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
+                </select>
+            </div>
+            <div class="settings-option pro-only" style="display: none;">
+                <label for="summaryTone">Summary Tone</label>
+                <select id="summaryTone">
+                </select>
+            </div>
+            <div class="settings-option pro-only" style="display: none;">
+                <label for="summaryDifficulty">Summary Difficulty</label>
+                <select id="summaryDifficulty">
                 </select>
             </div>
             <button id="saveSettings">Save Settings</button>
             <div id="settingsMessage" class="success-message"></div>
+            
+
         </div>
 
         <!-- Auth Tab -->
