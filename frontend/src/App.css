@@ -200,7 +200,7 @@ h1 {
 }
 
 .highlight {
-  background: var(--accent);
+  background: #FFE9A6;
   padding: 0.25rem 0.75rem;
   border-radius: 8px;
   display: inline-block;
