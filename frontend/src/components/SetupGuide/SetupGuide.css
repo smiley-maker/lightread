@@ -1,3 +1,5 @@
+@import '../../variables.css';
+
 .setup-guide-container {
   width: 100%;
   min-height: 100vh;
@@ -9,92 +11,167 @@
 }
 
 .setup-guide {
-  width: 100%;
   max-width: 800px;
-  padding: 3rem;
-  background-color: var(--background);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  margin: 0 auto;
+  padding: var(--spacing-xl);
 }
 
 .setup-header {
   text-align: center;
-  margin-bottom: 2.5rem;
-  position: relative;
+  margin-bottom: var(--spacing-2xl);
 }
 
-.setup-header h1 {
-  font-family: var(--font-heading);
+.setup-title {
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: var(--primary);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
 }
 
-.user-email {
+.setup-subtitle {
+  font-size: 1.25rem;
   color: var(--text-secondary);
-  font-size: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xl);
+}
+
+.step-card {
+  background-color: var(--background);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-xl);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  background-color: var(--primary);
+  color: var(--text-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.step-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.step-content {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: var(--spacing-lg);
+}
+
+.step-actions {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+}
+
+.step-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.step-button.primary {
+  background-color: var(--primary);
+  color: var(--text-light);
+  border: none;
+}
+
+.step-button.primary:hover {
+  background-color: var(--primary-dark);
+}
+
+.step-button.secondary {
+  background-color: var(--background-alt);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.step-button.secondary:hover {
+  background-color: var(--border);
+}
+
+.step-complete {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--success);
+  font-weight: 500;
+  margin-top: var(--spacing-md);
+}
+
+.step-complete svg {
+  width: 20px;
+  height: 20px;
 }
 
 .setup-progress {
-  margin-bottom: 3rem;
-}
-
-.step-indicators {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.step-indicator {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  margin-top: var(--spacing-2xl);
+  padding: var(--spacing-lg);
   background-color: var(--background-alt);
-  color: var(--text-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.progress-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  margin-bottom: var(--spacing-md);
 }
 
-.step-indicator.active {
-  background-color: var(--primary);
-  color: white;
+.progress-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.step-line {
-  flex: 1;
-  height: 3px;
-  background-color: var(--border);
-  margin: 0 0.75rem;
-  max-width: 100px;
-}
-
-.setup-content {
-  margin-bottom: 2.5rem;
-  min-height: 400px;
-}
-
-.setup-step {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.setup-step h2 {
-  font-family: var(--font-heading);
-  font-size: 1.8rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: var(--text);
-}
-
-.setup-step p {
+.progress-count {
   color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-  font-size: 1.1rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--spacing-md);
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--primary);
+  transition: width var(--transition-normal);
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
 }
 
 .setup-image {
@@ -237,28 +314,33 @@
   color: #721c24;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @media (max-width: 768px) {
   .setup-guide {
-    padding: 2rem;
+    padding: var(--spacing-md);
   }
-  
-  .setup-header h1 {
+
+  .setup-title {
     font-size: 2rem;
   }
-  
-  .step-line {
-    max-width: 60px;
+
+  .setup-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .step-card {
+    padding: var(--spacing-lg);
+  }
+
+  .step-title {
+    font-size: 1.25rem;
+  }
+
+  .step-actions {
+    flex-direction: column;
+  }
+
+  .step-button {
+    width: 100%;
   }
 }
 
@@ -271,16 +353,16 @@
     padding: 1.5rem;
   }
   
-  .setup-header h1 {
+  .setup-title {
     font-size: 1.75rem;
   }
   
-  .setup-step h2 {
-    font-size: 1.5rem;
+  .setup-subtitle {
+    font-size: 1.125rem;
   }
   
-  .setup-content {
-    min-height: 300px;
+  .setup-steps {
+    gap: var(--spacing-lg);
   }
   
   .nav-button {

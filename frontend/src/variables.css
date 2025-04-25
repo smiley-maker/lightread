@@ -1,0 +1,68 @@
+:root {
+  /* Colors */
+  --primary: #BAA5FF;
+  --primary-light: #D1C2FF;
+  --primary-dark: #9B8AD9;
+  --secondary: #B49A67;
+  --secondary-light: #FFF1C6;
+  --accent: #466365;
+  --accent-dark: #2A4244;
+  
+  /* Text Colors */
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-light: #FFFFFF;
+  
+  /* Background Colors */
+  --background: #FFFFFF;
+  --background-alt: #F8F9FA;
+  --background-dark: #222222;
+  
+  /* Border Colors */
+  --border: #E5E7EB;
+  --border-dark: #D1D5DB;
+  
+  /* Status Colors */
+  --success: #10B981;
+  --error: #EF4444;
+  --warning: #F59E0B;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  
+  /* Typography */
+  --font-heading: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 2.5rem;
+  --spacing-3xl: 3rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  
+  /* Z-index */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
+} 

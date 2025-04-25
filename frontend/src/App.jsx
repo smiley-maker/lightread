@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './App.css';
+import './variables.css';
+import './index.css';
 import logo from './assets/LightReadLogo.svg';
 import coneImage from './assets/lightread hero img.png';
 import demoImage from './assets/context menu example.png';

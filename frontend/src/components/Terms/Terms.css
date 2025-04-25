@@ -1,0 +1,103 @@
+@import '../../variables.css';
+
+.terms {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+}
+
+.terms-header {
+  text-align: center;
+  margin-bottom: var(--spacing-2xl);
+}
+
+.terms-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.terms-subtitle {
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.terms-content {
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.terms-section {
+  margin-bottom: var(--spacing-xl);
+}
+
+.terms-section h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.terms-section h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: var(--spacing-lg) 0 var(--spacing-md);
+}
+
+.terms-section p {
+  margin-bottom: var(--spacing-md);
+}
+
+.terms-section ul {
+  margin-bottom: var(--spacing-md);
+  padding-left: var(--spacing-lg);
+}
+
+.terms-section li {
+  margin-bottom: var(--spacing-sm);
+}
+
+.terms-section a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.terms-section a:hover {
+  text-decoration: underline;
+}
+
+.terms-footer {
+  margin-top: var(--spacing-2xl);
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+  .terms {
+    padding: var(--spacing-md);
+  }
+
+  .terms-title {
+    font-size: 2rem;
+  }
+
+  .terms-subtitle {
+    font-size: 1.125rem;
+  }
+
+  .terms-section h2 {
+    font-size: 1.5rem;
+  }
+
+  .terms-section h3 {
+    font-size: 1.25rem;
+  }
+} 
