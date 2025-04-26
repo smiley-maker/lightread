@@ -231,7 +231,7 @@ h1 {
   font-size: 1rem;
   color: var(--text-secondary);
   text-align: center;
-  margin-bottom: 4rem;
+  margin-bottom: 3rem;
   line-height: 1.6;
 }
 
@@ -243,6 +243,7 @@ h1 {
   width: 100%;
   padding: 0;
   position: relative;
+  margin-bottom: 0;
 }
 
 .feature-card-wrapper {
@@ -480,7 +481,7 @@ h1 {
   position: absolute;
   top: -12px;
   right: 24px;
-  background: var(--primary);
+  background: var(--primary-dark);
   color: white;
   padding: 0.25rem 1rem;
   border-radius: 1rem;
