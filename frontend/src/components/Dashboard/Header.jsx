@@ -16,7 +16,8 @@ const ROUTES = {
   dashboard: '/dashboard',
   summaries: '/dashboard/summaries',
   settings: '/dashboard/settings',
-  billing: '/dashboard/billing'
+  billing: '/dashboard/billing',
+  feedback: '/dashboard/feedback'
 };
 
 const Header = () => {
@@ -82,6 +83,12 @@ const Header = () => {
               onClick={() => handleNavigation(ROUTES.billing)}
             >
               billing
+            </button>
+            <button 
+              className={`nav-button ${isActive('/feedback') ? 'active' : ''}`} 
+              onClick={() => handleNavigation(ROUTES.feedback)}
+            >
+              feedback
             </button>
           </nav>
         </div>

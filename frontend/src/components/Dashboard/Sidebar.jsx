@@ -1,10 +1,11 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { FiHome, FiBookmark, FiSettings, FiCreditCard, FiLogOut } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Sidebar = ({ isOpen, user }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
   
   const navItems = [
@@ -22,7 +23,15 @@ const Sidebar = ({ isOpen, user }) => {
       console.error('Logout failed:', error);
     }
   };
-  
+
+  const handleNavigation = (path) => {
+    navigate(path);
+  };
+
+  const isActive = (path) => {
+    return location.pathname.includes(path);
+  };
+
   return (
     <aside className={`sidebar ${isOpen ? 'open' : 'closed'}`}>
       <div className="sidebar-content">
@@ -54,6 +63,15 @@ const Sidebar = ({ isOpen, user }) => {
                 </NavLink>
               </li>
             ))}
+            <li>
+              <button
+                className={`nav-item ${isActive('/feedback') ? 'active' : ''}`}
+                onClick={() => handleNavigation('/dashboard/feedback')}
+              >
+                <span className="nav-icon">💬</span>
+                <span className="nav-text">Feedback</span>
+              </button>
+            </li>
           </ul>
         </nav>
         

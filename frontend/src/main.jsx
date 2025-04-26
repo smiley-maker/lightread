@@ -15,6 +15,7 @@ import DashboardLayout from './components/Dashboard/DashboardLayout.jsx'
 import Summaries from './pages/Dashboard/Summaries.jsx'
 import Settings from './pages/Dashboard/Settings.jsx'
 import Billing from './pages/Dashboard/Billing.jsx'
+import Feedback from './pages/Dashboard/Feedback.jsx'
 
 /**
  * Router configuration for the application.
@@ -27,6 +28,7 @@ import Billing from './pages/Dashboard/Billing.jsx'
  *   - /summaries: Summaries view
  *   - /settings: User settings
  *   - /billing: Subscription management
+ *   - /feedback: Feedback form
  * - /terms: Terms of Service
  * - /privacy: Privacy Policy
  */
@@ -54,6 +56,10 @@ const router = createBrowserRouter([
       {
         path: 'billing',
         element: <Billing />,
+      },
+      {
+        path: 'feedback',
+        element: <Feedback />,
       },
     ],
   },
