@@ -156,12 +156,22 @@ async function loadUserData() {
             const proOnlyElements = document.querySelectorAll('.pro-only');
             const upgradeButton = document.getElementById('upgradeButton');
             if (limits.plan_type === 'pro') {
-                proOnlyElements.forEach(el => el.style.display = 'block');
+                proOnlyElements.forEach(el => {
+                    el.style.display = 'block';
+                    // Enable all selects inside pro-only elements
+                    el.querySelectorAll('select').forEach(sel => sel.disabled = false);
+                });
                 upgradeButton.style.display = 'none';
             } else {
-                proOnlyElements.forEach(el => el.style.display = 'none');
+                proOnlyElements.forEach(el => {
+                    el.style.display = 'none';
+                    // Disable all selects inside pro-only elements
+                    el.querySelectorAll('select').forEach(sel => sel.disabled = true);
+                });
                 upgradeButton.style.display = 'block';
             }
+            // Ensure all non-pro-only selects are enabled for free users
+            document.querySelectorAll('.settings-option:not(.pro-only) select').forEach(sel => sel.disabled = false);
         }
 
         // Load usage
@@ -295,13 +305,11 @@ async function checkAuth() {
     
     if (token && user) {
         document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('signupForm').style.display = 'none';
         document.getElementById('userInfo').style.display = 'block';
         document.getElementById('userEmail').textContent = user.email;
         loadUserData();
     } else {
         document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('signupForm').style.display = 'none';
         document.getElementById('userInfo').style.display = 'none';
     }
 }
@@ -337,63 +345,23 @@ document.getElementById('loginButton').addEventListener('click', async () => {
     }
 });
 
-// Signup
-document.getElementById('signupButton').addEventListener('click', async () => {
-    const email = document.getElementById('signupEmail').value;
-    const password = document.getElementById('signupPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-
-    if (password !== confirmPassword) {
-        document.getElementById('signupError').textContent = 'Passwords do not match';
-        return;
-    }
-
-    try {
-        const response = await fetch(`${SERVER_URL}/auth/signup`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ email, password })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Signup failed');
-        }
-
-        const data = await response.json();
-        await chrome.storage.local.set({
-            token: data.token,
-            user: { email }
-        });
-
-        checkAuth();
-    } catch (error) {
-        document.getElementById('signupError').textContent = error.message;
-    }
-});
-
-// Toggle between login and signup forms
-document.getElementById('showSignup').addEventListener('click', () => {
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('signupForm').style.display = 'block';
-});
-
-document.getElementById('showLogin').addEventListener('click', () => {
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('loginForm').style.display = 'block';
-});
-
 // Logout
 document.getElementById('logoutButton').addEventListener('click', async () => {
     await chrome.storage.local.remove(['token', 'user']);
     checkAuth();
 });
 
-// Initialize
-console.log('Popup initialized');
-checkAuth();
+// Setup event listener for signup link
+document.addEventListener("DOMContentLoaded", function() {
+    const signupLink = document.getElementById("goToSignup");
+    if (signupLink) {
+        signupLink.addEventListener("click", function(event) {
+            chrome.tabs.create({ url: "http://localhost:5173" });
+        });
+    }
+
+    checkAuth();
+});
 
 // Listen for refresh usage message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

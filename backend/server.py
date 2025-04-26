@@ -79,12 +79,15 @@ def signup():
         
         if auth_response.user:
             # Create initial user settings
-            supabase.table('user_settings').insert({
-                'user_id': auth_response.user.id,
-                'preferred_summary_length': 'medium',
-                'language': 'en',
-                'theme': 'system'
-            }).execute()
+            # supabase.table('user_settings').insert({
+            #     'user_id': auth_response.user.id,
+            #     'preferred_summary_length': '2-3 sentences (medium)',
+            #     'language': 'en',
+            #     'theme': 'system',
+            #     'summary_tone': 'conversational',
+            #     'summary_difficulty': 'Intermediate',
+            #     'save_source_url': True
+            # }).execute()
             
             # Create free subscription
             supabase.table('subscriptions').insert({

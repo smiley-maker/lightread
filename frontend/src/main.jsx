@@ -16,6 +16,7 @@ import Summaries from './pages/Dashboard/Summaries.jsx'
 import Settings from './pages/Dashboard/Settings.jsx'
 import Billing from './pages/Dashboard/Billing.jsx'
 import Feedback from './pages/Dashboard/Feedback.jsx'
+import SetupGuide from './components/SetupGuide/SetupGuide.jsx'
 
 /**
  * Router configuration for the application.
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <App />,
+  },
+  {
+    path: '/onboarding',
+    element: <SetupGuide />,
   },
   {
     path: '/dashboard',

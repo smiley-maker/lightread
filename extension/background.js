@@ -1,7 +1,10 @@
 // Move background.js to extension directory
 
+// Import configuration
+import config from './config.js';
+
 // Constants
-const SERVER_URL = 'http://localhost:3000';
+const SERVER_URL = config.SERVER_URL;
 
 // Auth state management
 let authState = {
@@ -18,7 +21,6 @@ chrome.storage.local.get(['token', 'user'], (result) => {
       token: result.token,
       user: result.user
     };
-    console.log('Loaded auth state from storage:', authState);
   }
 });
 
@@ -26,7 +28,6 @@ chrome.storage.local.get(['token', 'user'], (result) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'AUTH_STATE_CHANGE') {
     authState = request.authState;
-    console.log('Auth state updated:', authState);
   } else if (request.type === 'THEME_CHANGE') {
     // Update theme for all open popups
     chrome.tabs.query({}, (tabs) => {
@@ -369,7 +370,6 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   // Add pro controls if user is pro (before buttons)
   const addProControls = async () => {
     try {
-      console.log('Initializing pro controls...');
       // Get user limits to check if pro
       const limitsResponse = await fetch(`${serverUrl}/user/limits`, {
         headers: {
@@ -380,12 +380,9 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       if (!limitsResponse.ok) throw new Error('Failed to get user limits');
       
       const limits = await limitsResponse.json();
-      console.log('User limits:', limits);
       const isPro = limits.plan_type === 'pro' || limits.plan_type === 'enterprise';
-      console.log('Is pro user:', isPro);
       
       if (isPro) {
-        console.log('Fetching enum options...');
         // Get available options
         const optionsResponse = await fetch(`${serverUrl}/rpc/get_enum_values`, {
           method: 'POST',
@@ -398,7 +395,6 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
         if (!optionsResponse.ok) throw new Error('Failed to get options');
         
         const options = await optionsResponse.json();
-        console.log('Available options:', options);
         
         // Create controls container
         const controlsContainer = document.createElement('div');
@@ -554,7 +550,6 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
         
         // Insert controls before buttons
         popup.insertBefore(controlsContainer, buttonsContainer);
-        console.log('Pro controls added successfully');
       }
     } catch (error) {
       console.error('Error setting up pro controls:', error);

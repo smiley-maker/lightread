@@ -25,3 +25,6 @@ Thumbs.db
 # Build related files
 dist/
 node_modules/
+
+# Extension configuration
+extension/config.js

@@ -1,173 +1,184 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './SetupGuide.css';
 import { useAuth } from '../../contexts/AuthContext';
-import placeholderImg from '../../assets/LightReadLogo.svg'; // Use logo as placeholder for now
+import { Check, Chrome, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+import './SetupGuide.css';
 
-const SetupGuide = ({ user, selectedPlan = 'free', onClose }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+const SetupGuide = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
-  
-  const handleNextStep = () => {
-    if (currentStep < 3) {
+  const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isExtensionInstalled, setIsExtensionInstalled] = useState(false);
+  const [hasTriedSummary, setHasTriedSummary] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const demoTextRef = useRef(null);
+
+  // Check if extension is installed (simulate)
+  useEffect(() => {
+    const isInstalled = localStorage.getItem('lightread_extension_installed');
+    setIsExtensionInstalled(!!isInstalled);
+  }, []);
+
+  // Steps definition
+  const steps = [
+    {
+      id: 1,
+      title: 'Install the Chrome Extension',
+      description: 'Add LightRead to your Chrome browser to start summarizing text instantly.',
+      icon: <Chrome size={32} color="#8A66FF" />, // Higher contrast
+      action: () => {
+        window.open('https://chrome.google.com/webstore/detail/lightread/your-extension-id', '_blank');
+        localStorage.setItem('lightread_extension_installed', 'true');
+        setIsExtensionInstalled(true);
+      },
+      isComplete: isExtensionInstalled,
+    },
+    {
+      id: 2,
+      title: 'Sign In to the Extension',
+      description: 'Click the LightRead icon in your Chrome toolbar and sign in with your account. This lets the extension save your summaries and unlocks all features.',
+      icon: <Sparkles size={32} color="#8A66FF" />, // Higher contrast
+      action: null, // No action needed
+      isComplete: true, // Always allow to proceed
+    },
+    {
+      id: 3,
+      title: 'Try Your First Summary',
+      description: 'Highlight the text below, right-click, and select "Summarize with LightRead" to see it in action!',
+      icon: <Check size={32} color="#8A66FF" />, // Higher contrast
+      action: null,
+      isComplete: true, // Always allow to finish
+    },
+  ];
+
+  const handleNext = () => {
+    if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
+    } else {
+      handleComplete();
     }
   };
-  
-  const handlePrevStep = () => {
+
+  const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleSignOut = async () => {
+  const handleComplete = async () => {
+    setIsLoading(true);
     try {
-      await logout();
-      navigate('/');
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error('Error completing setup:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleBackToHome = () => {
-    if (onClose) {
-      onClose();
-    } else {
-      navigate('/');
+  // Auto-select demo text on click
+  const handleDemoTextClick = () => {
+    if (demoTextRef.current) {
+      const range = document.createRange();
+      range.selectNodeContents(demoTextRef.current);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
     }
   };
 
-  const handleGoToDashboard = () => {
-    navigate('/dashboard');
-  };
-
-  const isPro = selectedPlan === 'pro';
+  const currentStepData = steps[currentStep - 1];
 
   return (
-    <div className="setup-guide-container">
-      <div className="setup-guide">
+    <div className="setup-guide">
+      <div className="setup-container">
         <div className="setup-header">
           <h1>Welcome to LightRead!</h1>
-          <p className="user-email">{user?.email}</p>
-          <div className="subscription-badge" data-plan={selectedPlan}>
-            {isPro ? 'Pro Plan' : 'Free Plan'}
-          </div>
+          <p>Let's get you set up in just a few steps.</p>
         </div>
 
         <div className="setup-progress">
-          <div className="step-indicators">
-            <div className={`step-indicator ${currentStep >= 1 ? 'active' : ''}`}>1</div>
-            <div className="step-line"></div>
-            <div className={`step-indicator ${currentStep >= 2 ? 'active' : ''}`}>2</div>
-            <div className="step-line"></div>
-            <div className={`step-indicator ${currentStep >= 3 ? 'active' : ''}`}>3</div>
-          </div>
+          {steps.map((step, idx) => (
+            <div
+              key={step.id}
+              className={`progress-step ${step.id === currentStep ? 'active' : ''} ${
+                (currentStep > step.id || (step.id < currentStep && step.isComplete)) ? 'complete' : ''
+              }`}
+            >
+              <div className="step-number">
+                {(currentStep > step.id || (step.id < currentStep && step.isComplete)) ? <Check size={16} /> : step.id}
+              </div>
+              {idx < steps.length - 1 && <div className="step-line" />}
+            </div>
+          ))}
         </div>
 
         <div className="setup-content">
-          {currentStep === 1 && (
-            <div className="setup-step">
-              <h2>Step 1: Install the Extension</h2>
-              <p>Get started by installing the LightRead Chrome extension from the Chrome Web Store.</p>
-              
-              <div className="setup-image">
-                <img src={placeholderImg} alt="Chrome Web Store" />
+          <div className="step-content">
+            <div className="step-icon high-contrast-bg">{currentStepData.icon}</div>
+            <h2>{currentStepData.title}</h2>
+            <div className="step-underline" />
+            <p>{currentStepData.description}</p>
+            {currentStep === 1 && (
+              <div className="extension-install">
+                <button
+                  className="btn btn-primary"
+                  onClick={currentStepData.action}
+                >
+                  Install Extension
+                </button>
+                {isExtensionInstalled && (
+                  <p className="success-message">
+                    <Check size={16} /> Great! The extension is installed.
+                  </p>
+                )}
               </div>
-              
-              <a 
-                href="https://chrome.google.com/webstore/detail/lightread/your-extension-id" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="chrome-store-link"
-              >
-                <button className="btn btn-chrome">Add to Chrome</button>
-              </a>
-            </div>
-          )}
-
-          {currentStep === 2 && (
-            <div className="setup-step">
-              <h2>Step 2: Sign In to the Extension</h2>
-              <p>After installation, click on the LightRead extension icon in your browser toolbar and sign in with the same email and password you just used:</p>
-              
-              <div className="setup-credentials">
-                <div className="credential-item">
-                  <span>Email:</span>
-                  <strong>{user?.email}</strong>
-                </div>
-                <div className="credential-item">
-                  <span>Password:</span>
-                  <strong>The password you just created</strong>
-                </div>
-                <div className="credential-item">
-                  <span>Your Plan:</span>
-                  <strong className={isPro ? 'pro-text' : ''}>{isPro ? 'Pro' : 'Free'}</strong>
-                </div>
+            )}
+            {currentStep === 2 && (
+              <div className="sign-in">
+                <p className="info-message">
+                  <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
+                  If you don't see it, click the puzzle icon and pin LightRead for easy access!
+                </p>
               </div>
-              
-              <div className="setup-image">
-                <img src={placeholderImg} alt="Extension sign in" />
-              </div>
-            </div>
-          )}
-
-          {currentStep === 3 && (
-            <div className="setup-step">
-              <h2>Step 3: Start Using LightRead</h2>
-              <p>You're all set! Now you can use LightRead to summarize text from any webpage:</p>
-              
-              <ol className="usage-steps">
-                <li>Select text on any webpage</li>
-                <li>Right-click and select "Summarize with LightRead"</li>
-                <li>View your summary in the popup</li>
-                <li>All your summaries will be saved automatically!</li>
-              </ol>
-              
-              {isPro && (
-                <div className="pro-features">
-                  <h3>Your Pro Features Include:</h3>
-                  <ul>
-                    <li>Unlimited summaries (no daily limit)</li>
-                    <li>Adjustable summary lengths</li>
-                    <li>Customizable tone and style</li>
-                    <li>Summary history across devices</li>
-                    <li>Priority support</li>
-                  </ul>
-                </div>
-              )}
-              
-              <div className="setup-image">
-                <img src={placeholderImg} alt="LightRead in action" />
-              </div>
-              
-              <div className="setup-complete">
-                <h3>Ready to start reading smarter?</h3>
-                <div className="setup-action-buttons">
-                  <button onClick={handleBackToHome} className="home-link">Return to Homepage</button>
-                  <button onClick={handleGoToDashboard} className="dashboard-link">Go to Dashboard</button>
+            )}
+            {currentStep === 3 && (
+              <div className="try-summary">
+                <div className="demo-text">
+                  <p>Here's some sample text you can try summarizing:</p>
+                  <div
+                    className="selectable-text"
+                    ref={demoTextRef}
+                    tabIndex={0}
+                    onClick={handleDemoTextClick}
+                    title="Click to select all text"
+                    style={{ userSelect: 'text' }}
+                  >
+                    LightRead is an AI-powered Chrome extension that helps you quickly understand
+                    any text you find online. Simply highlight the text you want to summarize,
+                    right-click, and select "Summarize with LightRead" to get an instant summary.
+                  </div>
+                  <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="setup-navigation">
+        <div className="setup-actions">
           {currentStep > 1 && (
-            <button onClick={handlePrevStep} className="nav-button prev-button">
-              Back
+            <button className="btn btn-secondary" onClick={handleBack}>
+              <ChevronLeft size={16} /> Back
             </button>
           )}
-          
-          {currentStep < 3 ? (
-            <button onClick={handleNextStep} className="nav-button next-button">
-              Next
-            </button>
-          ) : (
-            <button onClick={handleSignOut} className="nav-button signout-button">
-              Sign Out
-            </button>
-          )}
+          <button
+            className="btn btn-primary"
+            onClick={currentStep === steps.length ? handleComplete : handleNext}
+            disabled={isLoading}
+          >
+            {currentStep === steps.length ? 'Finish Setup' : 'Next Step'}
+            {currentStep < steps.length && <ChevronRight size={16} />}
+          </button>
         </div>
       </div>
     </div>

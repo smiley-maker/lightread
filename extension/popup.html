@@ -228,7 +228,7 @@
                 <select id="summaryTone">
                 </select>
             </div>
-            <div class="settings-option">
+            <div class="settings-option pro-only" style="display: none;">
                 <label for="summaryDifficulty">Summary Difficulty</label>
                 <select id="summaryDifficulty">
                 </select>
@@ -254,18 +254,7 @@
                 <button id="loginButton">Login</button>
                 <div class="error" id="loginError"></div>
                 <div class="auth-toggle">
-                    Don't have an account? <a id="showSignup">Sign up</a>
-                </div>
-            </div>
-
-            <div id="signupForm" class="auth-form" style="display: none;">
-                <input type="email" id="signupEmail" placeholder="Email" required>
-                <input type="password" id="signupPassword" placeholder="Password" required>
-                <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
-                <button id="signupButton">Sign Up</button>
-                <div class="error" id="signupError"></div>
-                <div class="auth-toggle">
-                    Already have an account? <a id="showLogin">Login</a>
+                    Don't have an account? <a id="goToSignup" href="http://localhost:5173" target="_blank" rel="noopener noreferrer">Sign up</a>
                 </div>
             </div>
 

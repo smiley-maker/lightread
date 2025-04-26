@@ -66,7 +66,6 @@ const AuthForm = ({ onSuccess }) => {
         if (onSuccess) {
           onSuccess(result.data);
         }
-        navigate('/dashboard');
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');

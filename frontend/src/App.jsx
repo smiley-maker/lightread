@@ -18,6 +18,7 @@ import OpenBookIcon from './assets/open book.svg';
 import BoxIcon from './assets/box.png';
 import NoDataIcon from './assets/no data.png';
 import ShieldIcon from './assets/shield.svg';
+import { supabase } from './lib/supabase';
 
 const App = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -27,7 +28,31 @@ const App = () => {
   const [showPlanSelection, setShowPlanSelection] = useState(false);
   const [showSetupGuide, setShowSetupGuide] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const navigate = useNavigate();
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    if (user) {
+      // Check if user has a subscription (indicating they completed onboarding)
+      const checkOnboardingStatus = async () => {
+        try {
+          const { data: subscription } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          
+          setHasCompletedOnboarding(!!subscription);
+        } catch (error) {
+          console.error('Error checking onboarding status:', error);
+          setHasCompletedOnboarding(false);
+        }
+      };
+      
+      checkOnboardingStatus();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Handle scroll for navbar
@@ -62,6 +87,10 @@ const App = () => {
 
   const handleAuthButtonClick = () => {
     setShowAuthForm(true);
+    setShowPlanSelection(false);
+    setShowSetupGuide(false);
+    setSelectedPlan(null);
+    setHasCompletedOnboarding(false);
   };
 
   const handleAuthSuccess = (data) => {
@@ -78,7 +107,8 @@ const App = () => {
   const handlePlanSelectionComplete = (planType) => {
     setSelectedPlan(planType);
     setShowPlanSelection(false);
-    setShowSetupGuide(true);
+    // Redirect to onboarding route
+    navigate('/onboarding');
   };
 
   const handleCloseSetupGuide = () => {
@@ -104,12 +134,12 @@ const App = () => {
     return <AuthForm onSuccess={handleAuthSuccess} />;
   }
 
-  if (showPlanSelection && user) {
+  if (user && !hasCompletedOnboarding) {
+    if (showPlanSelection) {
+      return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;
+    }
+    // If user is logged in but hasn't completed onboarding, show plan selection
     return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;
-  }
-
-  if (showSetupGuide && user) {
-    return <SetupGuide user={user} selectedPlan={selectedPlan} onClose={handleCloseSetupGuide} />;
   }
 
   return (

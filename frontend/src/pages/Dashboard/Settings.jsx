@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getUserSettings, updateUserSettings, getSettingsOptions } from '../../lib/supabase';
+import { getUserSettings, updateUserSettings, getSettingsOptions, deactivateAccount, deleteAccount } from '../../lib/supabase';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import '../../components/Dashboard/Dashboard.css';
 import './Settings.css';
@@ -12,6 +12,9 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [showDeactivateDialog, setShowDeactivateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,20 +86,55 @@ const Settings = () => {
     }
   };
 
+  const handleDeactivateAccount = async () => {
+    try {
+      setLoading(true);
+      const { error } = await deactivateAccount();
+      
+      if (error) throw error;
+      
+      setMessage({
+        text: 'Your account has been deactivated. Your data will be kept for 6 months.',
+        type: 'success'
+      });
+      
+      // Logout the user after deactivation
+      await logout();
+    } catch (error) {
+      console.error('Error deactivating account:', error);
+      setMessage({
+        text: 'Failed to deactivate account. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+      setShowDeactivateDialog(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
-    if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-      try {
-        setLoading(true);
-        await logout();
-      } catch (error) {
-        console.error('Error deleting account:', error);
-        setMessage({
-          text: 'Failed to delete account. Please try again.',
-          type: 'error'
-        });
-      } finally {
-        setLoading(false);
-      }
+    try {
+      setLoading(true);
+      const { error } = await deleteAccount();
+      
+      if (error) throw error;
+      
+      setMessage({
+        text: 'Your account and all associated data have been permanently deleted.',
+        type: 'success'
+      });
+      
+      // Logout the user after deletion
+      await logout();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      setMessage({
+        text: 'Failed to delete account. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -212,16 +250,88 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="settings-section danger-zone">
-          <h3>Danger Zone</h3>
+        {/* Add Review Onboarding button here */}
+        <div style={{ margin: '2rem 0', textAlign: 'center' }}>
           <button
-            className="delete-account"
-            onClick={handleDeleteAccount}
-            disabled={loading}
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/onboarding'}
           >
-            Delete Account
+            Review Onboarding
           </button>
         </div>
+
+        <div className="settings-section danger-zone">
+          <h3>Danger Zone</h3>
+          
+          <div className="danger-actions">
+            <button
+              className="deactivate-account"
+              onClick={() => setShowDeactivateDialog(true)}
+              disabled={loading}
+            >
+              Deactivate Account
+            </button>
+            
+            <button
+              className="delete-account"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={loading}
+            >
+              Delete Account
+            </button>
+          </div>
+        </div>
+
+        {/* Deactivate Account Dialog */}
+        {showDeactivateDialog && (
+          <div className="dialog-overlay">
+            <div className="dialog">
+              <h3>Deactivate Account</h3>
+              <p>Are you sure you want to deactivate your account?</p>
+              <ul>
+                <li>Your subscription will be cancelled</li>
+                <li>You will be downgraded to the free plan</li>
+                <li>Your data will be kept for 6 months</li>
+                <li>You can reactivate your account within this period</li>
+              </ul>
+              <div className="dialog-actions">
+                <button onClick={() => setShowDeactivateDialog(false)}>Cancel</button>
+                <button className="confirm" onClick={handleDeactivateAccount}>Deactivate Account</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Dialog */}
+        {showDeleteDialog && (
+          <div className="dialog-overlay">
+            <div className="dialog">
+              <h3>Delete Account</h3>
+              <p>Are you absolutely sure you want to delete your account?</p>
+              <p className="warning">This action cannot be undone. All your data will be permanently deleted.</p>
+              <div className="verification">
+                <label>
+                  Type "DELETE" to confirm:
+                  <input 
+                    type="text" 
+                    placeholder="Type DELETE to confirm"
+                    onChange={(e) => setDeleteConfirmation(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="dialog-actions">
+                <button onClick={() => setShowDeleteDialog(false)}>Cancel</button>
+                <button 
+                  className="confirm" 
+                  onClick={handleDeleteAccount}
+                  disabled={deleteConfirmation !== 'DELETE'}
+                >
+                  Delete Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );

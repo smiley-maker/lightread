@@ -64,6 +64,15 @@ const PlanSelection = ({ user, onComplete }) => {
     }
   };
 
+  const handleUpgrade = async (plan) => {
+    try {
+      // Redirect to Stripe payment
+      window.location.href = `/payment?plan=${plan}`;
+    } catch (error) {
+      console.error('Error initiating payment:', error);
+    }
+  };
+
   return (
     <div className="plan-selection-container">
       <div className="plan-selection">

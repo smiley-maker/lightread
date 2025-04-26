@@ -764,4 +764,68 @@ export const getSettingsOptions = async () => {
       error: err
     };
   }
+};
+
+// Deactivate user account
+export const deactivateAccount = async () => {
+  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
+    return { error: null };
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Update subscription status to cancelled
+    const { error: subError } = await supabase
+      .from('subscriptions')
+      .update({ 
+        status: 'cancelled',
+        plan_type: 'free',
+        cancelled_at: new Date().toISOString(),
+        scheduled_deletion: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString() // 6 months from now
+      })
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    if (subError) throw subError;
+
+    return { error: null };
+  } catch (err) {
+    console.error('Error deactivating account:', err);
+    return { error: err };
+  }
+};
+
+// Delete user account
+export const deleteAccount = async () => {
+  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
+    return { error: null };
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    // Delete user's data from all tables
+    const tables = ['summaries', 'user_settings', 'subscriptions', 'daily_usage'];
+    
+    for (const table of tables) {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+    }
+
+    // Delete the user's auth account
+    const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+    if (authError) throw authError;
+
+    return { error: null };
+  } catch (err) {
+    console.error('Error deleting account:', err);
+    return { error: err };
+  }
 }; 
