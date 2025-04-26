@@ -126,6 +126,10 @@ async function loadUserData() {
                 ).join('');
                 summaryDifficultySelect.value = settings.summary_difficulty;
 
+                // Set save source URL setting
+                const saveSourceUrlSelect = document.getElementById('saveSourceUrl');
+                saveSourceUrlSelect.value = settings.save_source_url ? 'true' : 'false';
+
                 applyTheme(settings.theme);
             }
         }
@@ -192,7 +196,8 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
             preferred_summary_length: document.getElementById('summaryLength').value,
             theme: document.getElementById('theme').value,
             summary_tone: document.getElementById('summaryTone').value,
-            summary_difficulty: document.getElementById('summaryDifficulty').value
+            summary_difficulty: document.getElementById('summaryDifficulty').value,
+            save_source_url: document.getElementById('saveSourceUrl').value === 'true'
         };
 
         const response = await fetch(`${SERVER_URL}/user/settings`, {
@@ -389,6 +394,13 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
 // Initialize
 console.log('Popup initialized');
 checkAuth();
+
+// Listen for refresh usage message
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'REFRESH_USAGE') {
+    loadUserData();
+  }
+});
 
 chrome.storage.session.get(['session', 'jwtToken'], (result) => {
   if (result.session && result.jwtToken) {

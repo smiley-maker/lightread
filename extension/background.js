@@ -116,7 +116,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         args: [
           data.summary, 
           chrome.runtime.getURL("logo.png"), 
-          summaryData,
+          {
+            ...summaryData,
+            original_text: info.selectionText
+          },
           authState.token,
           SERVER_URL
         ]
@@ -235,7 +238,23 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
     padding: 4px 8px;
     border-radius: 4px;
   `;
-  closeButton.onclick = () => popup.remove();
+  closeButton.onclick = () => {
+    // Clear summary data
+    summaryData = null;
+    // Remove popup
+    popup.remove();
+  };
+
+  // Add click handler for clicks outside the popup
+  document.addEventListener('click', (event) => {
+    if (!popup.contains(event.target)) {
+      // Clear summary data
+      summaryData = null;
+      // Remove popup
+      popup.remove();
+    }
+  });
+
   header.appendChild(closeButton);
 
   popup.appendChild(header);
@@ -472,6 +491,10 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
         // Add regenerate function
         const regenerateSummary = async (tone, difficulty) => {
           try {
+            if (!summaryData.original_text) {
+              throw new Error('Unable to regenerate summary: original text not available');
+            }
+
             summaryText.textContent = 'Generating new summary...';
             updateButton.disabled = true;
             updateButton.style.opacity = '0.7';
@@ -489,16 +512,25 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
               })
             });
 
-            if (!response.ok) throw new Error('Failed to generate summary');
+            if (!response.ok) {
+              const errorData = await response.json();
+              if (errorData.code === 'PRO_FEATURE') {
+                throw new Error('Summary regeneration is only available for pro users. Please upgrade to pro to use this feature.');
+              }
+              throw new Error(errorData.error || 'Failed to generate summary');
+            }
             
             const data = await response.json();
             summaryText.textContent = data.summary;
             
             // Update summary data with new summary
             summaryData.summary = data.summary;
+
+            // Refresh usage display in popup
+            chrome.runtime.sendMessage({ type: 'REFRESH_USAGE' });
           } catch (error) {
             console.error('Error regenerating summary:', error);
-            summaryText.textContent = 'Failed to generate new summary. Please try again.';
+            summaryText.textContent = error.message || 'Failed to generate new summary. Please try again.';
           } finally {
             updateButton.disabled = false;
             updateButton.style.opacity = '1';

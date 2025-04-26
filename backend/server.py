@@ -317,10 +317,26 @@ def summarize_text():
             override_tone = data.get('override_tone')
             override_difficulty = data.get('override_difficulty')
             
-            if override_tone:
-                settings['summary_tone'] = override_tone
-            if override_difficulty:
-                settings['summary_difficulty'] = override_difficulty
+            if override_tone or override_difficulty:
+                # Increment usage count for regenerated summaries
+                summaries_count += 1
+                if summaries_count >= user_limits['daily_summaries']:
+                    return jsonify({
+                        'error': 'Daily summary limit reached',
+                        'limit': user_limits['daily_summaries'],
+                        'current': summaries_count
+                    }), 429
+                
+                if override_tone:
+                    settings['summary_tone'] = override_tone
+                if override_difficulty:
+                    settings['summary_difficulty'] = override_difficulty
+        elif data.get('override_tone') or data.get('override_difficulty'):
+            # Non-pro users trying to regenerate
+            return jsonify({
+                'error': 'Summary regeneration is only available for pro users',
+                'code': 'PRO_FEATURE'
+            }), 403
 
         # Generate summary using Gemini
         if not model:

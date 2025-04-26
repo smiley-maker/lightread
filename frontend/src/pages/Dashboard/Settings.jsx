@@ -193,15 +193,17 @@ const Settings = () => {
           <h3>Privacy</h3>
           <div className="settings-group">
             <label className="toggle-label">
-              <span>Save Source URLs</span>
-              <div className="toggle-container">
-                <input
-                  type="checkbox"
-                  checked={settings.save_source_url}
-                  onChange={(e) => handleSettingsChange('save_source_url', e.target.checked)}
-                  disabled={saving}
-                />
-                <span className="toggle-slider"></span>
+              <div className="toggle-header">
+                <span className="toggle-title">Save Source URLs</span>
+                <div className="toggle-container">
+                  <input
+                    type="checkbox"
+                    checked={settings.save_source_url}
+                    onChange={(e) => handleSettingsChange('save_source_url', e.target.checked)}
+                    disabled={saving}
+                  />
+                  <span className="toggle-slider"></span>
+                </div>
               </div>
               <p className="setting-description">
                 When enabled, the source URL of each summary will be saved. Disable this if you prefer not to store the websites you visit.
