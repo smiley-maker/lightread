@@ -188,6 +188,19 @@
             font-size: 12px;
             margin-top: 4px;
         }
+        
+        .plan-limits {
+            background-color: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        
+        .plan-limits p {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
@@ -261,6 +274,10 @@
             <div id="userInfo" style="display: none;">
                 <p>Logged in as: <span id="userEmail"></span></p>
                 <p>Plan: <span id="userPlan">Free</span></p>
+                <div class="plan-limits">
+                    <p>Daily limit: <span id="dailyLimit">5</span> summaries</p>
+                    <p>Max text length: <span id="maxTextLength">10000</span> characters</p>
+                </div>
                 <button id="logoutButton">Logout</button>
             </div>
         </div>

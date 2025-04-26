@@ -143,19 +143,27 @@ async function loadUserData() {
 
         if (limitsResponse.ok) {
             const limits = await limitsResponse.json();
+            console.log('Received limits:', limits); // Debug log
+            
             // Store the plan type and daily limit for later use
             window.userPlan = {
-                type: limits.plan_type,
-                dailyLimit: limits.daily_summaries
+                type: limits?.plan_type || 'free',
+                dailyLimit: limits?.daily_summaries || 5,
+                maxTextLength: limits?.max_text_length || 10000
             };
             
-            // Update plan text in account tab
-            document.getElementById('userPlan').textContent = limits.plan_type.charAt(0).toUpperCase() + limits.plan_type.slice(1);
+            // Update plan text in account tab with null check
+            const planType = limits?.plan_type || 'free';
+            document.getElementById('userPlan').textContent = planType.charAt(0).toUpperCase() + planType.slice(1);
+            
+            // Update plan limits display with null checks
+            document.getElementById('dailyLimit').textContent = limits?.daily_summaries || 5;
+            document.getElementById('maxTextLength').textContent = (limits?.max_text_length || 10000).toLocaleString();
             
             // Show/hide pro-only settings and upgrade button
             const proOnlyElements = document.querySelectorAll('.pro-only');
             const upgradeButton = document.getElementById('upgradeButton');
-            if (limits.plan_type === 'pro') {
+            if (planType === 'pro') {
                 proOnlyElements.forEach(el => {
                     el.style.display = 'block';
                     // Enable all selects inside pro-only elements

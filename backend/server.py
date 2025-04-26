@@ -176,24 +176,37 @@ def get_user_limits(user_id):
         subscription = result.data[0]
         plan = subscription['plan_type']
         
-        # Define limits based on plan
-        plan_limits = {
-            'free': {
-                'max_text_length': 10000,  # 10k characters
-                'daily_summaries': 5       # 5 summaries per day
-            },
-            'pro': {
-                'max_text_length': 50000,  # 50k characters
-                'daily_summaries': 50      # 50 summaries per day
-            },
-            'enterprise': {
-                'max_text_length': 100000, # 100k characters
-                'daily_summaries': 1000    # 1000 summaries per day
-            }
-        }
+        # Get limits from the usage_limits table
+        limits_result = supabase.from_('usage_limits').select('*').eq('plan_type', plan).execute()
         
-        limits = plan_limits.get(plan, plan_limits['free'])
-        limits['plan_type'] = plan
+        if limits_result.data and len(limits_result.data) > 0:
+            # Use the limits from the database
+            limit_data = limits_result.data[0]
+            limits = {
+                'max_text_length': limit_data.get('max_text_length', 10000),
+                'daily_summaries': limit_data.get('daily_summaries_limit', 5),
+                'plan_type': plan
+            }
+        else:
+            # Fallback to default limits if not found in the database
+            default_limits = {
+                'free': {
+                    'max_text_length': 10000,  # 10k characters
+                    'daily_summaries': 5       # 5 summaries per day
+                },
+                'pro': {
+                    'max_text_length': 50000,  # 50k characters
+                    'daily_summaries': 50      # 50 summaries per day
+                },
+                'enterprise': {
+                    'max_text_length': 100000, # 100k characters
+                    'daily_summaries': 1000    # 1000 summaries per day
+                }
+            }
+            limits = default_limits.get(plan, default_limits['free'])
+            limits['plan_type'] = plan
+        
+        # Always include plan_type in the response
         return limits
         
     except Exception as e:
