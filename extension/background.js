@@ -242,6 +242,12 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   closeButton.onclick = () => {
     // Clear summary data
     summaryData = null;
+    
+    // Stop any ongoing speech
+    if (speechSynthesis && isSpeaking) {
+      speechSynthesis.cancel();
+    }
+    
     // Remove popup
     popup.remove();
   };
@@ -251,6 +257,12 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
     if (!popup.contains(event.target)) {
       // Clear summary data
       summaryData = null;
+      
+      // Stop any ongoing speech
+      if (speechSynthesis && isSpeaking) {
+        speechSynthesis.cancel();
+      }
+      
       // Remove popup
       popup.remove();
     }
@@ -292,6 +304,56 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
     navigator.clipboard.writeText(summaryText.textContent);
     copyButton.textContent = 'Copied!';
     setTimeout(() => copyButton.textContent = 'Copy', 2000);
+  };
+
+  // Add text-to-speech button
+  const speakButton = document.createElement('button');
+  speakButton.textContent = 'Listen';
+  speakButton.style.cssText = `
+    background-color: var(--primary-color, #BAA5FF);
+    color: black;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    flex: 1;
+  `;
+  
+  // TTS state variables
+  let isSpeaking = false;
+  let speechSynthesis = window.speechSynthesis;
+  let speechUtterance = null;
+  
+  speakButton.onclick = () => {
+    if (isSpeaking) {
+      // Stop speaking
+      speechSynthesis.cancel();
+      speakButton.textContent = 'Listen';
+      isSpeaking = false;
+    } else {
+      // Start speaking
+      speechUtterance = new SpeechSynthesisUtterance(summaryText.textContent);
+      
+      // Set speaking state and button text
+      isSpeaking = true;
+      speakButton.textContent = 'Stop';
+      
+      // When speech ends
+      speechUtterance.onend = () => {
+        isSpeaking = false;
+        speakButton.textContent = 'Listen';
+      };
+      
+      // When speech errors
+      speechUtterance.onerror = () => {
+        isSpeaking = false;
+        speakButton.textContent = 'Listen';
+      };
+      
+      // Start speaking
+      speechSynthesis.speak(speechUtterance);
+    }
   };
 
   // Add save button
@@ -364,6 +426,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   };
 
   buttonsContainer.appendChild(copyButton);
+  buttonsContainer.appendChild(speakButton);
   buttonsContainer.appendChild(saveButton);
   popup.appendChild(buttonsContainer);
 
