@@ -37,7 +37,8 @@ const Settings = () => {
             summary_length: settingsData.data.summary_length,
             theme_type: settingsData.data.theme_type,
             summary_tone: settingsData.data.summary_tone,
-            summary_difficulty: settingsData.data.summary_difficulty
+            summary_difficulty: settingsData.data.summary_difficulty,
+            save_source_url: settingsData.data.save_source_url
           });
         }
 
@@ -184,6 +185,27 @@ const Settings = () => {
                   </option>
                 ))}
               </select>
+            </label>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h3>Privacy</h3>
+          <div className="settings-group">
+            <label className="toggle-label">
+              <span>Save Source URLs</span>
+              <div className="toggle-container">
+                <input
+                  type="checkbox"
+                  checked={settings.save_source_url}
+                  onChange={(e) => handleSettingsChange('save_source_url', e.target.checked)}
+                  disabled={saving}
+                />
+                <span className="toggle-slider"></span>
+              </div>
+              <p className="setting-description">
+                When enabled, the source URL of each summary will be saved. Disable this if you prefer not to store the websites you visit.
+              </p>
             </label>
           </div>
         </div>

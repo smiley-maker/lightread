@@ -3,9 +3,6 @@
 // Constants
 const SERVER_URL = 'http://localhost:3000';
 
-// Store the current summary data
-let currentSummaryData = null;
-
 // Auth state management
 let authState = {
   isLoggedIn: false,
@@ -104,9 +101,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       }
 
       const data = await response.json();
-      currentSummaryData = {
+      
+      // Prepare summary data
+      const summaryData = {
         ...data,
-        original_text: info.selectionText,
         source_url: tab.url,
         character_count: info.selectionText.length
       };
@@ -118,7 +116,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         args: [
           data.summary, 
           chrome.runtime.getURL("logo.png"), 
-          currentSummaryData,
+          summaryData,
           authState.token,
           SERVER_URL
         ]
@@ -291,13 +289,33 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   `;
   saveButton.onclick = async () => {
     try {
+      // Get user settings to check save_source_url
+      const settingsResponse = await fetch(`${serverUrl}/user/settings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!settingsResponse.ok) {
+        throw new Error('Failed to get user settings');
+      }
+
+      const settings = await settingsResponse.json();
+      const saveSourceUrl = settings.save_source_url ?? true;
+
+      // Prepare summary data based on settings
+      const dataToSave = {
+        ...summaryData,
+        source_url: saveSourceUrl ? summaryData.source_url : null
+      };
+
       const response = await fetch(`${serverUrl}/summaries/save`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(currentSummaryData)
+        body: JSON.stringify(dataToSave)
       });
 
       if (!response.ok) {
@@ -327,6 +345,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
 
   buttonsContainer.appendChild(copyButton);
   buttonsContainer.appendChild(saveButton);
+  popup.appendChild(buttonsContainer);
 
   // Add pro controls if user is pro (before buttons)
   const addProControls = async () => {
@@ -475,11 +494,8 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
             const data = await response.json();
             summaryText.textContent = data.summary;
             
-            // Update currentSummaryData with new summary
-            currentSummaryData = {
-              ...summaryData,
-              summary: data.summary
-            };
+            // Update summary data with new summary
+            summaryData.summary = data.summary;
           } catch (error) {
             console.error('Error regenerating summary:', error);
             summaryText.textContent = 'Failed to generate new summary. Please try again.';
@@ -491,10 +507,6 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
 
         // Add click handler for update button
         updateButton.onclick = () => regenerateSummary(toneSelect.value, difficultySelect.value);
-
-        // Remove the change handlers from selects since we now have a button
-        toneSelect.onchange = null;
-        difficultySelect.onchange = null;
 
         // Assemble controls
         toneGroup.appendChild(toneLabel);
@@ -509,16 +521,13 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
         controlsContainer.appendChild(updateButton);
         
         // Insert controls before buttons
-        popup.appendChild(controlsContainer);
+        popup.insertBefore(controlsContainer, buttonsContainer);
         console.log('Pro controls added successfully');
       }
     } catch (error) {
       console.error('Error setting up pro controls:', error);
     }
   };
-
-  // Add buttons last
-  popup.appendChild(buttonsContainer);
 
   // Add CSS variables for theme support
   const style = document.createElement('style');

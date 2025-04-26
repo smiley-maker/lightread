@@ -439,25 +439,52 @@
   color: #666;
 }
 
+.summary-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.source-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background-color: var(--primary-light);
+  color: var(--text);
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.source-link:hover {
+  background-color: var(--primary);
+}
+
+.source-link svg {
+  width: 16px;
+  height: 16px;
+}
+
 .copy-button {
-  background-color: #ddd7ff;
-  color: #6d28d9;
+  padding: 6px 12px;
+  background-color: var(--primary-light);
+  color: var(--text);
   border: none;
   border-radius: 4px;
-  padding: 0.5rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 500;
   cursor: pointer;
+  font-size: 14px;
   transition: all 0.2s;
 }
 
 .copy-button:hover {
-  background-color: #c6b8ff;
+  background-color: var(--primary);
 }
 
 .copy-button.copied {
-  background-color: #6d28d9;
-  color: white;
+  background-color: var(--accent);
+  color: var(--text);
 }
 
 .summaries-loading, .summaries-empty, .summaries-error {

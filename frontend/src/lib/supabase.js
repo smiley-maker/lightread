@@ -348,7 +348,7 @@ export const getUserSettings = async () => {
 
     const { data, error } = await supabase
       .from('user_settings')
-      .select('preferred_summary_length, theme, summary_tone, summary_difficulty, created_at, updated_at')
+      .select('preferred_summary_length, theme, summary_tone, summary_difficulty, save_source_url, created_at, updated_at')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -360,12 +360,14 @@ export const getUserSettings = async () => {
         summary_length: data.preferred_summary_length,
         theme_type: data.theme,
         summary_tone: data.summary_tone,
-        summary_difficulty: data.summary_difficulty
+        summary_difficulty: data.summary_difficulty,
+        save_source_url: data.save_source_url ?? true
       } : {
         summary_length: 'medium',
         theme_type: 'light',
         summary_tone: 'neutral',
-        summary_difficulty: 'medium'
+        summary_difficulty: 'medium',
+        save_source_url: true
       },
       error: null
     };
@@ -423,6 +425,7 @@ export const updateUserSettings = async (settings) => {
           theme: settings.theme_type,
           summary_tone: settings.summary_tone,
           summary_difficulty: settings.summary_difficulty,
+          save_source_url: settings.save_source_url,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
@@ -438,6 +441,7 @@ export const updateUserSettings = async (settings) => {
           theme: settings.theme_type,
           summary_tone: settings.summary_tone,
           summary_difficulty: settings.summary_difficulty,
+          save_source_url: settings.save_source_url,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }])

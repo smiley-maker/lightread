@@ -414,14 +414,12 @@ def save_summary():
 
         # Extract required fields
         summary = data.get('summary')
-        original_text = data.get('original_text')
         source_url = data.get('source_url')
         character_count = data.get('character_count')
 
-        if not all([summary, original_text, character_count]):
+        if not all([summary, character_count]):
             missing_fields = []
             if not summary: missing_fields.append('summary')
-            if not original_text: missing_fields.append('original_text')
             if not character_count: missing_fields.append('character_count')
             print(f"Missing required fields: {missing_fields}")
             return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
@@ -430,7 +428,6 @@ def save_summary():
         print(f"Attempting to save summary for user {user_id}")
         result = auth_supabase.from_('summaries').insert({
             'user_id': user_id,
-            'original_text': original_text,
             'summary': summary,
             'source_url': source_url,
             'character_count': character_count
