@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserSubscription, updateUserSubscription } from '../../lib/supabase';
+import { createBillingPortalSession } from '../../lib/stripe';
 import './Billing.css';
 
 const Billing = () => {
@@ -39,6 +40,14 @@ const Billing = () => {
     
     try {
       setUpdating(true);
+      
+      if (planType === 'pro') {
+        // For upgrading to pro, redirect to Stripe checkout
+        await createBillingPortalSession();
+        return;
+      }
+      
+      // For downgrading to free, update the subscription
       const { data, error } = await updateUserSubscription(user.id, planType);
       
       if (error) {
@@ -47,7 +56,7 @@ const Billing = () => {
       
       setSubscription(data);
       setMessage({ 
-        text: `Successfully ${planType === 'pro' ? 'upgraded to' : 'switched to'} ${planType} plan!`, 
+        text: `Successfully switched to ${planType} plan!`, 
         type: 'success' 
       });
       
@@ -62,6 +71,18 @@ const Billing = () => {
       });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      await createBillingPortalSession();
+    } catch (err) {
+      console.error('Error opening billing portal:', err);
+      setMessage({ 
+        text: 'Failed to open billing portal. Please try again.', 
+        type: 'error' 
+      });
     }
   };
 
@@ -133,8 +154,8 @@ const Billing = () => {
             <div className="payment-info">
               <h3>Payment Information</h3>
               <p>Your next payment of $5 will be processed on {new Date(subscription.end_date).toLocaleDateString()}</p>
-              <button className="cancel-subscription" onClick={() => handlePlanChange('free')}>
-                Cancel Subscription
+              <button className="cancel-subscription" onClick={handleManageSubscription}>
+                Manage Subscription
               </button>
             </div>
           )}

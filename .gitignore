@@ -4,6 +4,11 @@
 .env.development.local
 .env.test.local
 .env.production.local
+.env.list
+.env.local.list
+.env.production
+.env.development
+.env.test
 
 # Python virtual environment
 venv/

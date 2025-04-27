@@ -7,6 +7,7 @@ from supabase import create_client, Client
 from functools import wraps
 import jwt
 from datetime import datetime, timedelta
+from .stripe_api import stripe_api
 
 # Load environment variables
 load_dotenv()
@@ -16,9 +17,12 @@ CORS(app, origins='*')
 
 # Initialize Supabase client
 supabase: Client = create_client(
-    os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_KEY")
+    supabase_url=os.environ.get('SUPABASE_URL'),
+    supabase_key=os.environ.get('SUPABASE_KEY')
 )
+
+# Register Stripe API routes
+app.register_blueprint(stripe_api, url_prefix='/api')
 
 # Configure Gemini API
 gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -79,15 +83,15 @@ def signup():
         
         if auth_response.user:
             # Create initial user settings
-            # supabase.table('user_settings').insert({
-            #     'user_id': auth_response.user.id,
-            #     'preferred_summary_length': '2-3 sentences (medium)',
-            #     'language': 'en',
-            #     'theme': 'system',
-            #     'summary_tone': 'conversational',
-            #     'summary_difficulty': 'Intermediate',
-            #     'save_source_url': True
-            # }).execute()
+            supabase.table('user_settings').insert({
+                'user_id': auth_response.user.id,
+                'preferred_summary_length': '2-3 sentences (medium)',
+                'language': 'en',
+                'theme': 'system',
+                'summary_tone': 'conversational',
+                'summary_difficulty': 'Intermediate',
+                'save_source_url': True
+            }).execute()
             
             # Create free subscription
             supabase.table('subscriptions').insert({

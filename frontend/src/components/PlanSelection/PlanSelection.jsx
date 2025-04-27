@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import './PlanSelection.css';
 import { supabase } from '../../lib/supabase';
+import { createCheckoutSession } from '../../lib/stripe';
 
 const PlanSelection = ({ user, onComplete }) => {
   const [selectedPlan, setSelectedPlan] = useState('free');
@@ -46,11 +47,17 @@ const PlanSelection = ({ user, onComplete }) => {
         throw new Error(subError.message);
       }
       
-      // If pro plan is selected, we would integrate Stripe payment here
+      // If pro plan is selected, redirect to Stripe checkout
       if (selectedPlan === 'pro') {
-        // For now, we'll just move on without actual payment processing
-        console.log('Would redirect to Stripe payment here');
-        // In a real implementation, you'd redirect to Stripe checkout or show a payment form
+        try {
+          // The price ID should match your Stripe product's price ID
+          await createCheckoutSession('price_1234567890'); // Replace with your actual price ID
+          return; // Don't call onComplete as we're redirecting to Stripe
+        } catch (err) {
+          console.error('Error creating Stripe session:', err);
+          setError('Failed to initiate payment. Please try again.');
+          return;
+        }
       }
       
       if (onComplete) {
