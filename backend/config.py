@@ -4,6 +4,12 @@ import os
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_KEY = os.environ.get('SUPABASE_KEY')
 
+# JWT configuration
+JWT_SECRET = os.environ.get('JWT_SECRET')
+
+# AI configuration
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
 # Stripe configuration
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
