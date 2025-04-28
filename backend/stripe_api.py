@@ -5,9 +5,17 @@ from config import (
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET
 )
+from supabase import create_client
+import os
 
 stripe_api = Blueprint('stripe_api', __name__)
 stripe.api_key = STRIPE_SECRET_KEY
+
+# Initialize Supabase client
+supabase = create_client(
+    supabase_url=os.environ.get('SUPABASE_URL'),
+    supabase_key=os.environ.get('SUPABASE_KEY')
+)
 
 @stripe_api.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
@@ -26,8 +34,8 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='http://localhost:5173/dashboard?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='http://localhost:5173/dashboard',
+            success_url='https://lightread.xyz/dashboard?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://lightread.xyz/dashboard',
             customer_email=request.headers.get('X-User-Email'),
         )
         
@@ -50,7 +58,7 @@ def create_portal_session():
         # Create billing portal session
         session = stripe.billing_portal.Session.create(
             customer=customer.id,
-            return_url='http://localhost:5173/dashboard',
+            return_url='https://lightread.xyz/dashboard',
         )
         
         return jsonify({'url': session.url})
