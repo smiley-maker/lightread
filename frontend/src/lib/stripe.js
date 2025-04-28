@@ -75,4 +75,27 @@ export const createBillingPortalSession = async () => {
     console.error('Error creating billing portal session:', error);
     throw error;
   }
+};
+
+// Verify a checkout session
+export const verifyCheckoutSession = async (sessionId) => {
+  try {
+    const response = await fetch(`${API_URL}/api/verify-session/${sessionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `Server responded with ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error verifying checkout session:', error);
+    throw error;
+  }
 }; 

@@ -1,14 +1,92 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
+import { getUserSubscription } from '../../lib/supabase';
+import { verifyCheckoutSession } from '../../lib/stripe';
 import '../../components/Dashboard/Dashboard.css';
 
 const Dashboard = () => {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
+  const location = useLocation();
   const [summaryStats, setSummaryStats] = useState({
     total: 0,
     lastWeek: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [subscriptionUpdated, setSubscriptionUpdated] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
+  const [subscriptionMessage, setSubscriptionMessage] = useState('');
+
+  // Function to manually refresh subscription status
+  const refreshSubscriptionStatus = async () => {
+    if (!user) return;
+    
+    try {
+      setSubscriptionMessage('Checking subscription status...');
+      const { data, error } = await getUserSubscription(user.id);
+      
+      if (error) {
+        console.error('Error fetching subscription:', error);
+        setSubscriptionMessage('Failed to check subscription. Please try again.');
+      } else if (data) {
+        setSubscriptionStatus(data);
+        setSubscriptionMessage(`Your current plan is: ${data.plan_type.toUpperCase()}`);
+        
+        if (data.stripe_customer_id) {
+          setSubscriptionMessage(prev => `${prev} (Stripe customer ID: ${data.stripe_customer_id.substring(0, 10)}...)`);
+        }
+      } else {
+        setSubscriptionMessage('No subscription found.');
+      }
+    } catch (err) {
+      console.error('Error checking subscription:', err);
+      setSubscriptionMessage('An error occurred. Please try again.');
+    }
+  };
+
+  // Check for Stripe session_id in URL query params
+  useEffect(() => {
+    const checkStripeSession = async () => {
+      const queryParams = new URLSearchParams(location.search);
+      const sessionId = queryParams.get('session_id');
+      
+      if (sessionId && user) {
+        try {
+          console.log('Stripe checkout completed with session ID:', sessionId);
+          
+          // First try to manually verify the session
+          try {
+            const result = await verifyCheckoutSession(sessionId);
+            console.log('Verification result:', result);
+            
+            if (result.success) {
+              console.log('Payment verified successfully');
+            }
+          } catch (verifyError) {
+            console.error('Error verifying payment:', verifyError);
+          }
+          
+          // Fetch the latest subscription data
+          const { data, error } = await getUserSubscription(user.id);
+          
+          if (error) {
+            console.error('Error fetching subscription after payment:', error);
+          } else if (data) {
+            console.log('Subscription status after payment:', data);
+            setSubscriptionUpdated(true);
+          }
+          
+          // Clear the session_id from the URL to prevent reprocessing
+          const newUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, newUrl);
+        } catch (err) {
+          console.error('Error processing checkout session:', err);
+        }
+      }
+    };
+    
+    checkStripeSession();
+  }, [location.search, user]);
 
   useEffect(() => {
     // In a real app, this would fetch summary statistics from an API
@@ -32,7 +110,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [currentUser]);
+  }, [user, subscriptionUpdated]);
 
   if (isLoading) {
     return (
@@ -52,6 +130,19 @@ const Dashboard = () => {
     <div className="dashboard-page">
       <h1 className="dashboard-title">Dashboard</h1>
 
+      {/* Subscription Status Section */}
+      {subscriptionMessage && (
+        <div className={`mb-4 p-4 rounded-lg border ${
+          subscriptionMessage.includes('Failed') || subscriptionMessage.includes('error')
+            ? 'border-red-300 bg-red-50 text-red-700'
+            : subscriptionMessage.includes('PRO')
+            ? 'border-green-300 bg-green-50 text-green-700'
+            : 'border-blue-300 bg-blue-50 text-blue-700'
+        }`}>
+          <p>{subscriptionMessage}</p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
           <h3 className="text-lg font-medium text-gray-700 mb-1">Total Summaries</h3>
@@ -68,6 +159,16 @@ const Dashboard = () => {
             Summaries created in the last 7 days
           </p>
         </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8">
+        <h2 className="dashboard-subtitle mb-4">Subscription</h2>
+        <button 
+          onClick={refreshSubscriptionStatus}
+          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+        >
+          Check Subscription Status
+        </button>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
