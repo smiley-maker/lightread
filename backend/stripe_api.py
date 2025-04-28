@@ -22,6 +22,7 @@ def create_checkout_session():
     try:
         data = request.get_json()
         price_id = data.get('priceId')
+        customer_email = data.get('email')
         
         if not price_id:
             return jsonify({'error': 'Price ID is required'}), 400
@@ -36,7 +37,7 @@ def create_checkout_session():
             mode='subscription',
             success_url='https://lightread.xyz/dashboard?session_id={CHECKOUT_SESSION_ID}',
             cancel_url='https://lightread.xyz/dashboard',
-            customer_email=request.headers.get('X-User-Email'),
+            customer_email=customer_email,
         )
         
         return jsonify({'sessionId': session.id})
@@ -46,8 +47,13 @@ def create_checkout_session():
 @stripe_api.route('/create-portal-session', methods=['POST'])
 def create_portal_session():
     try:
-        # Get the customer ID from the subscription
-        customer_email = request.headers.get('X-User-Email')
+        # Get the customer email from the request body
+        data = request.get_json()
+        customer_email = data.get('email')
+        
+        if not customer_email:
+            return jsonify({'error': 'Email is required'}), 400
+            
         customers = stripe.Customer.list(email=customer_email)
         
         if not customers.data:

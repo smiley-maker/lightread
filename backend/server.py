@@ -27,12 +27,15 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "https://lightread.xyz",           # Production frontend
-            "http://localhost:5173",           # Local development
+            "http://localhost:5173",           # Local development for Vite
+            "http://localhost:3000",           # Alternative local development port
             "chrome-extension://*"             # Chrome extension
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True
+        "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+        "supports_credentials": True,
+        "expose_headers": ["Access-Control-Allow-Origin"],
+        "max_age": 600
     }
 })
 

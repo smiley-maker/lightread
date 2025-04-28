@@ -37,11 +37,16 @@ const App = () => {
       // Check if user has a subscription (indicating they completed onboarding)
       const checkOnboardingStatus = async () => {
         try {
-          const { data: subscription } = await supabase
+          const { data: subscription, error } = await supabase
             .from('subscriptions')
             .select('*')
             .eq('user_id', user.id)
             .single();
+          
+          if (error && error.code !== 'PGRST116') {
+            // Log only if it's not the "no rows returned" error
+            console.error('Error checking subscription:', error);
+          }
           
           setHasCompletedOnboarding(!!subscription);
         } catch (error) {

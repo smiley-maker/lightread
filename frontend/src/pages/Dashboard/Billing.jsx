@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserSubscription, updateUserSubscription } from '../../lib/supabase';
-import { createBillingPortalSession } from '../../lib/stripe';
+import { createCheckoutSession, createBillingPortalSession } from '../../lib/stripe';
 import './Billing.css';
 
 const Billing = () => {
@@ -10,6 +10,9 @@ const Billing = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  
+  // Stripe price ID for the Pro plan
+  const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -42,15 +45,26 @@ const Billing = () => {
       setUpdating(true);
       
       if (planType === 'pro') {
-        // For upgrading to pro, redirect to Stripe checkout
-        await createBillingPortalSession();
-        return;
+        // For upgrading to pro, use the checkout session
+        localStorage.setItem('userEmail', user.email);
+        try {
+          await createCheckoutSession(STRIPE_PRICE_ID);
+          return; // Exit early as we're redirecting
+        } catch (err) {
+          console.error('Error creating checkout session:', err);
+          setMessage({ 
+            text: 'Failed to initiate payment. Please try again.', 
+            type: 'error' 
+          });
+          return;
+        }
       }
       
-      // For downgrading to free, update the subscription
+      // For downgrading to free plan
       const { data, error } = await updateUserSubscription(user.id, planType);
       
       if (error) {
+        console.error('Error updating subscription:', error);
         throw error;
       }
       
@@ -76,6 +90,11 @@ const Billing = () => {
 
   const handleManageSubscription = async () => {
     try {
+      if (!user || !user.email) {
+        throw new Error('User information is missing');
+      }
+      
+      localStorage.setItem('userEmail', user.email);
       await createBillingPortalSession();
     } catch (err) {
       console.error('Error opening billing portal:', err);

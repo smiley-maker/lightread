@@ -1,21 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize the Supabase client with fallback values for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
-
-// Flag to determine if we're using a real Supabase instance
-const isUsingRealSupabase = import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Manual flag to force using mock auth (for demo purposes)
-const FORCE_MOCK_AUTH = false; // Set to false to attempt real auth if credentials are available
-
-// Provide a helpful warning for missing environment variables in development
-if (!isUsingRealSupabase || FORCE_MOCK_AUTH) {
-  console.warn(
-    `${!isUsingRealSupabase ? 'Supabase environment variables are missing.' : 'Mock auth is forced.'} Using mock authentication for demo purposes.`
-  );
-}
+// Initialize the Supabase client with environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Create the Supabase client with a singleton pattern to prevent multiple instances
 let supabaseInstance = null;
@@ -35,29 +22,8 @@ const getSupabase = () => {
 
 export const supabase = getSupabase();
 
-// Mock user for demo purposes
-const mockUser = {
-  id: 'mock-user-id',
-  email: 'demo@example.com',
-  user_metadata: {
-    name: 'Demo User'
-  }
-};
-
 // Authentication helpers
 export const signUp = async (email, password) => {
-  // Use mock auth if forced or if real credentials aren't available
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    return {
-      data: {
-        user: { ...mockUser, email },
-        session: { access_token: 'mock-token' }
-      },
-      error: null
-    };
-  }
-  
-  // Try real auth first
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -65,45 +31,18 @@ export const signUp = async (email, password) => {
     });
     
     if (error) {
-      // Fall back to mock auth on error
-      return {
-        data: {
-          user: { ...mockUser, email },
-          session: { access_token: 'mock-token' }
-        },
-        error: null
-      };
+      console.error('Error signing up with Supabase:', error);
+      return { data: null, error };
     }
     
-    return { data, error };
+    return { data, error: null };
   } catch (err) {
-    // Fall back to mock auth on exception
-    return {
-      data: {
-        user: { ...mockUser, email },
-        session: { access_token: 'mock-token' }
-      },
-      error: null
-    };
+    console.error('Exception during signUp:', err);
+    return { data: null, error: err };
   }
 };
 
 export const signIn = async (email, password) => {
-  // Use mock auth if forced or if real credentials aren't available
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    const mockUserData = { ...mockUser, email };
-    // Store mock user in localStorage to simulate persistence
-    localStorage.setItem('lightread-mock-user', JSON.stringify(mockUserData));
-    return {
-      data: {
-        user: mockUserData,
-        session: { access_token: 'mock-token' }
-      },
-      error: null
-    };
-  }
-  
-  // Try real auth first
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -111,69 +50,44 @@ export const signIn = async (email, password) => {
     });
     
     if (error) {
-      // Fall back to mock auth on error
-      return {
-        data: {
-          user: { ...mockUser, email },
-          session: { access_token: 'mock-token' }
-        },
-        error: null
-      };
+      console.error('Error signing in with Supabase:', error);
+      return { data: null, error };
     }
     
-    return { data, error };
+    return { data, error: null };
   } catch (err) {
-    // Fall back to mock auth on exception
-    return {
-      data: {
-        user: { ...mockUser, email },
-        session: { access_token: 'mock-token' }
-      },
-      error: null
-    };
+    console.error('Exception during signIn:', err);
+    return { data: null, error: err };
   }
 };
 
 export const signOut = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Remove mock user from localStorage
-    localStorage.removeItem('lightread-mock-user');
-    return { error: null };
-  }
-  
   try {
     const { error } = await supabase.auth.signOut();
     return { error };
   } catch (err) {
-    return { error: null };
+    console.error('Error signing out:', err);
+    return { error: err };
   }
 };
 
 export const getCurrentUser = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Check for a mock user in localStorage to simulate persistence
-    const mockUserSession = localStorage.getItem('lightread-mock-user');
-    return mockUserSession ? JSON.parse(mockUserSession) : null;
-  }
-  
   try {
     const { data: { user } } = await supabase.auth.getUser();
     return user;
   } catch (err) {
+    console.error('Error getting current user:', err);
     return null;
   }
 };
 
 export const onAuthStateChange = (callback) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    return { data: { subscription: { unsubscribe: () => {} } } };
-  }
-  
   try {
     return supabase.auth.onAuthStateChange((event, session) => {
       callback(event, session);
     });
   } catch (err) {
+    console.error('Error setting up auth state change listener:', err);
     return { data: { subscription: { unsubscribe: () => {} } } };
   }
 };
@@ -181,22 +95,6 @@ export const onAuthStateChange = (callback) => {
 // Dashboard data functions
 export const getUserSummaries = async (userId, options = {}) => {
   const { pageSize = 10, cursor = null } = options;
-  
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Return mock summaries for demo with pagination
-    const mockSummaries = [
-      { id: 1, user_id: userId, summary: "The article discusses the impact of artificial intelligence on modern workspace efficiency, highlighting both productivity gains and potential concerns about job displacement.", created_at: new Date().toISOString() },
-      { id: 2, user_id: userId, summary: "Research findings indicate that regular meditation can significantly reduce stress levels and improve cognitive function in adults over a 12-week period.", created_at: new Date(Date.now() - 86400000 * 3).toISOString() },
-      { id: 3, user_id: userId, summary: "The company announced a new sustainable initiative that aims to reduce carbon emissions by 50% before 2030 through innovative manufacturing processes.", created_at: new Date(Date.now() - 86400000 * 7).toISOString() }
-    ];
-    
-    return {
-      data: mockSummaries.slice(0, pageSize),
-      hasMore: mockSummaries.length > pageSize,
-      nextCursor: mockSummaries.length > pageSize ? mockSummaries[pageSize - 1].created_at : null,
-      error: null
-    };
-  }
   
   try {
     let query = supabase
@@ -230,21 +128,6 @@ export const getUserSummaries = async (userId, options = {}) => {
 };
 
 export const getUserSubscription = async (userId) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Return mock subscription for demo
-    return {
-      data: {
-        id: 1,
-        user_id: userId,
-        plan_type: 'free',
-        status: 'active',
-        end_date: new Date(Date.now() + 86400000 * 30).toISOString(),
-        created_at: new Date(Date.now() - 86400000 * 15).toISOString()
-      },
-      error: null
-    };
-  }
-  
   try {
     const { data, error } = await supabase
       .from('subscriptions')
@@ -287,24 +170,6 @@ export const getUserSubscription = async (userId) => {
 };
 
 export const getUserDailyUsage = async (userId, days = 7) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Return mock usage data for demo
-    const mockData = [];
-    for (let i = 0; i < days; i++) {
-      mockData.push({
-        id: i + 1,
-        user_id: userId,
-        date: new Date(Date.now() - 86400000 * i).toISOString().split('T')[0],
-        summaries_count: Math.floor(Math.random() * 5)
-      });
-    }
-    
-    return {
-      data: mockData,
-      error: null
-    };
-  }
-  
   try {
     // Get date for 'days' ago
     const startDate = new Date();
@@ -326,19 +191,6 @@ export const getUserDailyUsage = async (userId, days = 7) => {
 
 // Get user settings
 export const getUserSettings = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Mock response for dev/testing
-    return {
-      data: {
-        summary_length: 'medium',
-        theme_type: 'light',
-        summary_tone: 'neutral',
-        summary_difficulty: 'medium'
-      },
-      error: null
-    };
-  }
-
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -388,18 +240,6 @@ export const getUserSettings = async () => {
 
 // Update user settings
 export const updateUserSettings = async (settings) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Mock response for dev/testing
-    return {
-      data: {
-        ...settings,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      error: null
-    };
-  }
-
   try {
     const { data: { user } } = await supabase.auth.getUser();
     
@@ -475,21 +315,6 @@ export const updateUserSettings = async (settings) => {
 
 // Update user subscription
 export const updateUserSubscription = async (userId, planType) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Return mock subscription data for demo
-    return {
-      data: {
-        id: 1,
-        user_id: userId,
-        plan_type: planType,
-        status: 'active',
-        start_date: new Date().toISOString(),
-        end_date: new Date(Date.now() + 86400000 * 30).toISOString()
-      },
-      error: null
-    };
-  }
-  
   try {
     // This implementation works, but maybe revisit keeping past subscriptions and marking them as cancelled
     // First mark any existing active subscriptions as inactive
@@ -521,19 +346,6 @@ export const updateUserSubscription = async (userId, planType) => {
 
 // Get dropdown options
 export const getDropdownOptions = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Return mock dropdown options
-    return {
-      data: {
-        summary_length: ['short', 'medium', 'long'],
-        theme_type: ['light', 'dark', 'system'],
-        summary_tone: ['neutral', 'excited', 'formal', 'casual'],
-        summary_difficulty: ['eli5', 'eli10', 'advanced']
-      },
-      error: null
-    };
-  }
-  
   try {
     // Get summary_length options
     const { data: lengthData, error: lengthError } = await supabase
@@ -588,20 +400,6 @@ export const getDropdownOptions = async () => {
 };
 
 export const getUserPlan = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Mock response for dev/testing
-    return {
-      data: {
-        id: 'mock-id',
-        user_id: 'mock-user-id',
-        plan_type: 'free',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      error: null
-    };
-  }
-
   try {
     const session = await getCurrentUser();
     if (!session) {
@@ -638,20 +436,6 @@ export const getUserPlan = async () => {
 };
 
 export const updateUserPlan = async (planType) => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Mock response for dev/testing
-    return {
-      data: {
-        id: 'mock-id',
-        user_id: 'mock-user-id',
-        plan_type: planType,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      error: null
-    };
-  }
-
   try {
     const session = await getCurrentUser();
     if (!session) {
@@ -705,21 +489,6 @@ export const updateUserPlan = async (planType) => {
 
 // Get available options for settings
 export const getSettingsOptions = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    // Mock response for dev/testing
-    return {
-      data: {
-        summary_length: ['short', 'medium', 'long'],
-        theme_type: ['light', 'dark', 'system'],
-        summary_tone: ['neutral', 'excited', 'formal', 'casual'],
-        summary_difficulty: ['simple', 'medium', 'advanced', 'eli5'],
-        plan_type: ['free', 'pro'],
-        subscription_state: ['active', 'inactive', 'cancelled']
-      },
-      error: null
-    };
-  }
-
   try {
     // Call the database function to get enum values
     const { data: enumData, error: enumError } = await supabase
@@ -768,10 +537,6 @@ export const getSettingsOptions = async () => {
 
 // Deactivate user account
 export const deactivateAccount = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    return { error: null };
-  }
-
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');
@@ -799,10 +564,6 @@ export const deactivateAccount = async () => {
 
 // Delete user account
 export const deleteAccount = async () => {
-  if (FORCE_MOCK_AUTH || !isUsingRealSupabase) {
-    return { error: null };
-  }
-
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('User not authenticated');

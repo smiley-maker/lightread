@@ -7,6 +7,9 @@ const PlanSelection = ({ user, onComplete }) => {
   const [selectedPlan, setSelectedPlan] = useState('free');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Stripe price ID from environment variables
+  const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
 
   const handlePlanSelect = (plan) => {
     setSelectedPlan(plan);
@@ -18,6 +21,10 @@ const PlanSelection = ({ user, onComplete }) => {
     setError(null);
     
     try {
+      if (!user || !user.id) {
+        throw new Error('User is not authenticated. Please log in and try again.');
+      }
+      
       // Current date for timestamps
       const now = new Date();
       
@@ -44,14 +51,17 @@ const PlanSelection = ({ user, onComplete }) => {
         });
       
       if (subError) {
+        console.error('Error inserting subscription record:', subError);
         throw new Error(subError.message);
       }
       
       // If pro plan is selected, redirect to Stripe checkout
       if (selectedPlan === 'pro') {
         try {
-          // The price ID should match your Stripe product's price ID
-          await createCheckoutSession('price_1234567890'); // Replace with your actual price ID
+          // Store the user email locally so it can be sent with the API request
+          localStorage.setItem('userEmail', user.email || '');
+          // Redirect to checkout
+          await createCheckoutSession(STRIPE_PRICE_ID);
           return; // Don't call onComplete as we're redirecting to Stripe
         } catch (err) {
           console.error('Error creating Stripe session:', err);
@@ -60,12 +70,13 @@ const PlanSelection = ({ user, onComplete }) => {
         }
       }
       
+      // For free plan, simply complete the onboarding
       if (onComplete) {
         onComplete(selectedPlan);
       }
     } catch (err) {
       console.error('Error saving subscription:', err);
-      setError('Failed to save your subscription. Please try again.');
+      setError(`Failed to save your subscription: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
