@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LightRead Debug Page</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #333;
+    }
+    h1 { color: #4F46E5; }
+    .success { color: #10B981; }
+    .error { color: #EF4444; }
+    .card {
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body>
+  <h1>LightRead Debug Page</h1>
+  <div class="card">
+    <h2 class="success">Static File Serving Works!</h2>
+    <p>If you can see this page, it means Vercel is correctly serving static files from your build output.</p>
+  </div>
+  
+  <div class="card">
+    <h2>Next Steps:</h2>
+    <ol>
+      <li>Check browser console for JavaScript errors</li>
+      <li>Verify environment variables are correctly set in Vercel</li>
+      <li>Check network requests to your backend API</li>
+      <li>Ensure the routing configuration is correct</li>
+    </ol>
+  </div>
+
+  <script>
+    // Simple script to check if JavaScript is running
+    document.body.innerHTML += `
+      <div class="card">
+        <h2 class="success">JavaScript is Working!</h2>
+        <p>Window location: ${window.location.href}</p>
+        <p>Environment mode: ${process.env.NODE_ENV || 'Not available'}</p>
+      </div>
+    `;
+    
+    // Try to load an environment variable
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL;
+      document.body.innerHTML += `
+        <div class="card">
+          <h2>Environment Variable Check:</h2>
+          <p>API URL: ${apiUrl || 'Not found'}</p>
+        </div>
+      `;
+    } catch (error) {
+      document.body.innerHTML += `
+        <div class="card">
+          <h2 class="error">Environment Variable Error:</h2>
+          <p>${error.message}</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html> 

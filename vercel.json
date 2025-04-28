@@ -2,5 +2,9 @@
   "outputDirectory": "frontend/dist",
   "buildCommand": "cd frontend && ./vercel-build.sh",
   "installCommand": "cd frontend && npm install",
-  "framework": "vite"
+  "framework": "vite",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ]
 } 

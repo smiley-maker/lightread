@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found | LightRead</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      max-width: 650px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #333;
+      text-align: center;
+    }
+    h1 { color: #4F46E5; font-size: 2.5rem; }
+    .code { 
+      font-size: 6rem; 
+      margin: 0;
+      color: #EF4444;
+      font-weight: bold;
+    }
+    .message { font-size: 1.5rem; margin-bottom: 2rem; }
+    .card {
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      text-align: left;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #4F46E5;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background-color 0.2s;
+    }
+    .btn:hover {
+      background-color: #4338CA;
+    }
+  </style>
+</head>
+<body>
+  <p class="code">404</p>
+  <h1>Page Not Found</h1>
+  <p class="message">The page you're looking for doesn't exist or has been moved.</p>
+  
+  <a href="/" class="btn">Return to Home</a>
+  
+  <div class="card" style="margin-top: 40px;">
+    <h2>Debug Information:</h2>
+    <p>Requested URL: <span id="current-url"></span></p>
+    <p>This is a static 404 page. If you're seeing this, it means the Vercel routing configuration may not be correctly set up for single-page applications.</p>
+  </div>
+
+  <script>
+    // Display the current URL for debugging
+    document.getElementById('current-url').textContent = window.location.href;
+  </script>
+</body>
+</html> 
