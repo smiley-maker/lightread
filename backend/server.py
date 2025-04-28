@@ -27,6 +27,8 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "https://lightread.xyz",           # Production frontend
+            "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app", # Vercel preview deployment
+            "https://*.vercel.app",            # Any Vercel deployment
             "http://localhost:5173",           # Local development for Vite
             "http://localhost:3000",           # Alternative local development port
             "chrome-extension://*"             # Chrome extension
@@ -623,6 +625,66 @@ def get_enum_values(current_user):
 @app.route('/')
 def home():
     return "LightRead Summarization Server is running!"
+
+# Add specific CORS configuration for the webhook endpoint
+@app.after_request
+def after_request(response):
+    # Get the origin from the request
+    origin = request.headers.get('Origin', '')
+    
+    # Check if the request is for the webhook endpoint
+    if request.path == '/api/webhook':
+        # For webhook requests, we don't need to set CORS headers
+        # because Stripe doesn't care about them, it just needs a 200 response
+        pass
+    elif origin:
+        # For requests with an Origin header, check if it's allowed
+        allowed_origins = [
+            "https://lightread.xyz",
+            "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app",
+            "http://localhost:5173",
+            "http://localhost:3000"
+        ]
+        
+        # Check for Vercel deployments
+        if ".vercel.app" in origin:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        # Check for specific allowed origins
+        elif origin in allowed_origins:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        # For chrome extensions
+        elif origin.startswith("chrome-extension://"):
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    
+    return response
+
+@app.before_request
+def log_request_info():
+    # Log basic request info
+    if request.path == '/api/webhook':
+        print('==================== WEBHOOK REQUEST ====================')
+        print(f"Method: {request.method}")
+        print(f"Path: {request.path}")
+        print(f"Headers: {dict(request.headers)}")
+        
+        # For POST requests, log the body if it's not too large
+        if request.method == 'POST' and request.content_length < 10000:
+            try:
+                print(f"Body: {request.get_data(as_text=True)}")
+            except:
+                print("Could not log request body")
+        
+        print('==================== END REQUEST INFO ====================')
+    return None
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)
