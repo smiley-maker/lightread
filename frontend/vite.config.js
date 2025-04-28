@@ -8,4 +8,9 @@ export default defineConfig({
   envDir: '.',
   // Require variables to start with VITE_ prefix
   envPrefix: 'VITE_',
+  // Explicitly set the build output directory
+  build: {
+    outDir: 'dist',
+    emptyOutDir: true,
+  },
 })
