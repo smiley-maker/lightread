@@ -27,6 +27,7 @@ CORS(app, resources={
     r"/*": {
         "origins": [
             "https://lightread.xyz",           # Production frontend
+            "https://www.lightread.xyz",       # Production frontend with www
             "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app", # Vercel preview deployment
             "https://*.vercel.app",            # Any Vercel deployment
             "http://localhost:5173",           # Local development for Vite
@@ -641,6 +642,7 @@ def after_request(response):
         # For requests with an Origin header, check if it's allowed
         allowed_origins = [
             "https://lightread.xyz",
+            "https://www.lightread.xyz",
             "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app",
             "http://localhost:5173",
             "http://localhost:3000"
