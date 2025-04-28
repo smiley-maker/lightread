@@ -97,35 +97,81 @@ def handle_checkout_session_completed(session):
     customer = stripe.Customer.retrieve(session.customer)
     user_email = customer.email
     
-    # Update subscription in Supabase
-    supabase.table('subscriptions').update({
-        'plan_type': 'pro',
-        'status': 'active',
-        'start_date': datetime.utcnow().isoformat(),
-        'end_date': (datetime.utcnow() + timedelta(days=30)).isoformat(),
-        'stripe_customer_id': session.customer,
-        'stripe_subscription_id': session.subscription
-    }).eq('user_email', user_email).execute()
+    # Find the user by email in the users table
+    user_response = supabase.table('users').select('id').eq('email', user_email).execute()
+    if not user_response.data or len(user_response.data) == 0:
+        # Log error if user not found
+        print(f"Error: User with email {user_email} not found in the database")
+        return
+    
+    user_id = user_response.data[0]['id']
+    
+    # Check if user already has a subscription
+    existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).eq('status', 'active').execute()
+    
+    if existing_sub.data and len(existing_sub.data) > 0:
+        # Update existing subscription
+        supabase.table('subscriptions').update({
+            'plan_type': 'pro',
+            'status': 'active',
+            'start_date': datetime.utcnow().isoformat(),
+            'end_date': (datetime.utcnow() + timedelta(days=30)).isoformat(),
+            'stripe_customer_id': session.customer,
+            'stripe_subscription_id': session.subscription
+        }).eq('user_id', user_id).eq('status', 'active').execute()
+    else:
+        # Create new subscription
+        supabase.table('subscriptions').insert({
+            'user_id': user_id,
+            'plan_type': 'pro',
+            'status': 'active',
+            'start_date': datetime.utcnow().isoformat(),
+            'end_date': (datetime.utcnow() + timedelta(days=30)).isoformat(),
+            'stripe_customer_id': session.customer,
+            'stripe_subscription_id': session.subscription,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }).execute()
 
 def handle_subscription_updated(subscription):
     # Update subscription status in database
     customer = stripe.Customer.retrieve(subscription.customer)
     user_email = customer.email
     
+    # Find the user by email in the users table
+    user_response = supabase.table('users').select('id').eq('email', user_email).execute()
+    if not user_response.data or len(user_response.data) == 0:
+        # Log error if user not found
+        print(f"Error: User with email {user_email} not found in the database")
+        return
+    
+    user_id = user_response.data[0]['id']
+    
     # Update subscription in Supabase
     supabase.table('subscriptions').update({
         'status': subscription.status,
-        'end_date': datetime.fromtimestamp(subscription.current_period_end).isoformat()
-    }).eq('user_email', user_email).execute()
+        'end_date': datetime.fromtimestamp(subscription.current_period_end).isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }).eq('user_id', user_id).eq('stripe_subscription_id', subscription.id).execute()
 
 def handle_subscription_deleted(subscription):
     # Update subscription status to cancelled
     customer = stripe.Customer.retrieve(subscription.customer)
     user_email = customer.email
     
+    # Find the user by email in the users table
+    user_response = supabase.table('users').select('id').eq('email', user_email).execute()
+    if not user_response.data or len(user_response.data) == 0:
+        # Log error if user not found
+        print(f"Error: User with email {user_email} not found in the database")
+        return
+    
+    user_id = user_response.data[0]['id']
+    
     # Update subscription in Supabase
     supabase.table('subscriptions').update({
         'status': 'cancelled',
         'plan_type': 'free',
-        'cancelled_at': datetime.utcnow().isoformat()
-    }).eq('user_email', user_email).execute() 
+        'cancelled_at': datetime.utcnow().isoformat(),
+        'updated_at': datetime.utcnow().isoformat()
+    }).eq('user_id', user_id).eq('stripe_subscription_id', subscription.id).execute() 
