@@ -54,13 +54,40 @@
     
     // Try to load an environment variable
     try {
-      const apiUrl = import.meta.env.VITE_API_URL;
-      document.body.innerHTML += `
+      const envVars = {
+        'VITE_API_URL': import.meta.env.VITE_API_URL,
+        'VITE_SUPABASE_URL': import.meta.env.VITE_SUPABASE_URL,
+        'VITE_SUPABASE_ANON_KEY': import.meta.env.VITE_SUPABASE_ANON_KEY ? '✓ Present (value hidden)' : '✗ Missing',
+        'VITE_STRIPE_PUBLISHABLE_KEY': import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? '✓ Present (value hidden)' : '✗ Missing',
+        'VITE_STRIPE_PRICE_ID': import.meta.env.VITE_STRIPE_PRICE_ID,
+        'VITE_STRIPE_PRODUCT_ID': import.meta.env.VITE_STRIPE_PRODUCT_ID
+      };
+      
+      let envHtml = `
         <div class="card">
-          <h2>Environment Variable Check:</h2>
-          <p>API URL: ${apiUrl || 'Not found'}</p>
+          <h2>Environment Variables Check:</h2>
+          <ul>
+      `;
+      
+      for (const [key, value] of Object.entries(envVars)) {
+        const status = value ? '✓' : '✗';
+        const color = value ? 'success' : 'error';
+        let displayValue = value;
+        
+        // Hide sensitive values
+        if (key.includes('KEY') && value !== '✗ Missing' && value !== '✓ Present (value hidden)') {
+          displayValue = '✓ Present (value hidden)';
+        }
+        
+        envHtml += `<li><strong>${key}:</strong> <span class="${color}">${displayValue || '✗ Missing'}</span></li>`;
+      }
+      
+      envHtml += `
+          </ul>
         </div>
       `;
+      
+      document.body.innerHTML += envHtml;
     } catch (error) {
       document.body.innerHTML += `
         <div class="card">
