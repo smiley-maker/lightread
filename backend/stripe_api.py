@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 import stripe
 from datetime import datetime, timedelta
+import config
 from config import (
     STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET,
@@ -82,40 +83,73 @@ def create_portal_session():
 
 @stripe_api.route('/webhook', methods=['POST'])
 def webhook():
-    payload = request.get_data()
+    """
+    Handle Stripe webhook events
+    """
+    payload = request.data
     sig_header = request.headers.get('Stripe-Signature')
     
+    # For debugging, log the request info
+    print("==================== REQUEST INFO ====================")
+    print(f"Request data: {payload.decode('utf-8')}")
+    print(f"Signature header: {sig_header}")
+    print("==================== END REQUEST INFO ====================")
     print(f"Received webhook with signature: {sig_header[:10]}...")
     
     try:
+        # Construct the event using the payload and signature
         event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
+            payload, sig_header, config.STRIPE_WEBHOOK_SECRET
         )
         print(f"Webhook event constructed successfully: {event.type}")
+        
+        # Handle different event types
+        if event.type == 'checkout.session.completed':
+            session = event.data.object
+            # Process the checkout session
+            handle_checkout_session_completed(session)
+        elif event.type == 'customer.subscription.updated':
+            subscription = event.data.object
+            # Update subscription status
+            handle_subscription_updated(subscription)
+        elif event.type == 'customer.subscription.deleted':
+            subscription = event.data.object
+            # Mark subscription as cancelled
+            handle_subscription_deleted(subscription)
+        elif event.type == 'invoice.paid':
+            # Handle the invoice paid event
+            invoice = event.data.object
+            print(f"Processing invoice.paid event for invoice: {invoice.id}")
+            
+            # Get the subscription ID from the invoice
+            if hasattr(invoice, 'subscription') and invoice.subscription:
+                subscription_id = invoice.subscription
+                # Retrieve the subscription
+                try:
+                    subscription = stripe.Subscription.retrieve(subscription_id)
+                    print(f"Retrieved subscription: {subscription.id} for invoice: {invoice.id}")
+                    # Update the subscription in our database
+                    handle_subscription_updated(subscription)
+                except Exception as sub_err:
+                    print(f"Error retrieving subscription for invoice: {str(sub_err)}")
+            else:
+                print(f"No subscription associated with invoice {invoice.id}")
+        else:
+            print(f"Unhandled event type: {event.type}")
+        
+        return jsonify({'status': 'success'}), 200
     except ValueError as e:
-        print(f"Invalid payload error: {str(e)}")
-        return jsonify({'error': 'Invalid payload'}), 400
+        # Invalid payload
+        print(f"Invalid payload: {str(e)}")
+        return jsonify({'status': 'failure', 'error': 'Invalid payload'}), 400
     except stripe.error.SignatureVerificationError as e:
-        print(f"Invalid signature error: {str(e)}")
-        return jsonify({'error': 'Invalid signature'}), 400
-        
-    # Handle the event
-    if event.type == 'checkout.session.completed':
-        session = event.data.object
-        print(f"Processing checkout.session.completed: {session.id}")
-        handle_checkout_session_completed(session)
-    elif event.type == 'customer.subscription.updated':
-        subscription = event.data.object
-        print(f"Processing customer.subscription.updated: {subscription.id}")
-        handle_subscription_updated(subscription)
-    elif event.type == 'customer.subscription.deleted':
-        subscription = event.data.object
-        print(f"Processing customer.subscription.deleted: {subscription.id}")
-        handle_subscription_deleted(subscription)
-    else:
-        print(f"Unhandled event type: {event.type}")
-        
-    return jsonify({'status': 'success'})
+        # Invalid signature
+        print(f"Invalid signature: {str(e)}")
+        return jsonify({'status': 'failure', 'error': 'Invalid signature'}), 400
+    except Exception as e:
+        # Other error
+        print(f"Webhook error: {str(e)}")
+        return jsonify({'status': 'failure', 'error': str(e)}), 500
 
 @stripe_api.route('/verify-session/<session_id>', methods=['GET'])
 def verify_session(session_id):
@@ -191,7 +225,17 @@ def handle_checkout_session_completed(session):
         if hasattr(session, 'subscription') and session.subscription:
             subscription_id = session.subscription
             subscription = stripe.Subscription.retrieve(subscription_id)
-            plan_id = subscription.items.data[0].plan.id if subscription.items.data else None
+            # Check if items is callable (it's a method) or an attribute with data
+            if hasattr(subscription, 'items'):
+                if callable(subscription.items):
+                    # If items is a method, call it to get the data
+                    items_data = subscription.items()
+                    plan_id = items_data.data[0].plan.id if items_data.data else None
+                else:
+                    # If items is an attribute with data property
+                    plan_id = subscription.items.data[0].plan.id if hasattr(subscription.items, 'data') and subscription.items.data else None
+            else:
+                plan_id = None
             print(f"Got subscription from session: {subscription_id}, plan: {plan_id}")
         
         # Option 2: If subscription ID isn't directly available, we can try other approaches
@@ -257,7 +301,20 @@ def handle_checkout_session_completed(session):
             if subscription_id:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 update_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                update_data['billing_period'] = subscription.items.data[0].plan.interval if subscription.items.data else 'month'
+                
+                # Handle items safely
+                billing_period = 'month'  # Default
+                if hasattr(subscription, 'items'):
+                    if callable(subscription.items):
+                        # If items is a method, call it to get the data
+                        items_data = subscription.items()
+                        if items_data.data and len(items_data.data) > 0:
+                            billing_period = items_data.data[0].plan.interval
+                    elif hasattr(subscription.items, 'data') and subscription.items.data:
+                        # If items is an attribute with data property
+                        billing_period = subscription.items.data[0].plan.interval
+                
+                update_data['billing_period'] = billing_period
             
             print(f"Updating existing subscription for user {user_id}")
             try:
@@ -287,7 +344,20 @@ def handle_checkout_session_completed(session):
             if subscription_id:
                 subscription = stripe.Subscription.retrieve(subscription_id)
                 create_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                create_data['billing_period'] = subscription.items.data[0].plan.interval if subscription.items.data else 'month'
+                
+                # Handle items safely
+                billing_period = 'month'  # Default
+                if hasattr(subscription, 'items'):
+                    if callable(subscription.items):
+                        # If items is a method, call it to get the data
+                        items_data = subscription.items()
+                        if items_data.data and len(items_data.data) > 0:
+                            billing_period = items_data.data[0].plan.interval
+                    elif hasattr(subscription.items, 'data') and subscription.items.data:
+                        # If items is an attribute with data property
+                        billing_period = subscription.items.data[0].plan.interval
+                
+                create_data['billing_period'] = billing_period
             
             print(f"Creating new subscription for user {user_id}")
             try:
