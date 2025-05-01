@@ -73,6 +73,12 @@ const Dashboard = () => {
         try {
           console.log('Stripe checkout completed with session ID:', sessionId);
           
+          // Set the active tab to 'billing' to show subscription details
+          setActiveTab('billing');
+          
+          // Display a temporary message
+          setSubscriptionMessage('Verifying payment...');
+          
           // First try to manually verify the session
           try {
             const result = await verifyCheckoutSession(sessionId);
@@ -80,32 +86,45 @@ const Dashboard = () => {
             
             if (result.success) {
               console.log('Payment verified successfully');
+              setSubscriptionMessage('Payment successful! Updating your subscription...');
+              
+              // Fetch the latest subscription data
+              const { data, error } = await getUserSubscription(user.id);
+              
+              if (error) {
+                console.error('Error fetching subscription after payment:', error);
+                setSubscriptionMessage('Payment successful, but there was an error updating your subscription. Please refresh the page.');
+              } else if (data) {
+                console.log('Subscription status after payment:', data);
+                setSubscriptionUpdated(true);
+                
+                if (data.plan_type === 'pro') {
+                  setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
+                } else {
+                  setSubscriptionMessage('Your subscription has been updated.');
+                }
+              }
+            } else {
+              console.log('Payment verification returned:', result);
+              setSubscriptionMessage('Payment verification pending. Your subscription will update shortly.');
             }
           } catch (verifyError) {
             console.error('Error verifying payment:', verifyError);
-          }
-          
-          // Fetch the latest subscription data
-          const { data, error } = await getUserSubscription(user.id);
-          
-          if (error) {
-            console.error('Error fetching subscription after payment:', error);
-          } else if (data) {
-            console.log('Subscription status after payment:', data);
-            setSubscriptionUpdated(true);
+            setSubscriptionMessage('There was an issue verifying your payment. Please check your subscription status.');
           }
           
           // Clear the session_id from the URL to prevent reprocessing
-          const newUrl = window.location.pathname;
+          const newUrl = window.location.pathname + '?tab=billing';
           window.history.replaceState({}, document.title, newUrl);
         } catch (err) {
           console.error('Error processing checkout session:', err);
+          setSubscriptionMessage('Error processing payment information. Please contact support if this persists.');
         }
       }
     };
     
     checkStripeSession();
-  }, [location.search, user]);
+  }, [location.search, user, navigate]);
 
   useEffect(() => {
     // In a real app, this would fetch summary statistics from an API
