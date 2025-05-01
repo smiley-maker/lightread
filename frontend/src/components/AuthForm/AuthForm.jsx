@@ -56,6 +56,14 @@ const AuthForm = ({ onSuccess }) => {
       
       if (isSignUp) {
         result = await signup(email, password);
+        
+        if (!result.error) {
+          // For signup, we'll redirect to the dashboard with plan selection tab
+          localStorage.setItem('userEmail', email);
+          console.log('Successfully signed up, redirecting to plan selection');
+          navigate('/dashboard?tab=billing', { replace: true });
+          return;
+        }
       } else {
         result = await login(email, password);
       }

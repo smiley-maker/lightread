@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { getUserSubscription } from '../../lib/supabase';
 import { verifyCheckoutSession } from '../../lib/stripe';
 import '../../components/Dashboard/Dashboard.css';
+import Billing from './Billing';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [summaryStats, setSummaryStats] = useState({
     total: 0,
     lastWeek: 0,
@@ -16,6 +19,22 @@ const Dashboard = () => {
   const [subscriptionUpdated, setSubscriptionUpdated] = useState(false);
   const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [subscriptionMessage, setSubscriptionMessage] = useState('');
+
+  // Parse the tab parameter from URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const tabParam = queryParams.get('tab');
+    
+    if (tabParam && ['dashboard', 'billing', 'settings', 'history'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
+
+  // Function to change tabs and update URL
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    navigate(`/dashboard?tab=${tab}`, { replace: true });
+  };
 
   // Function to manually refresh subscription status
   const refreshSubscriptionStatus = async () => {
@@ -112,6 +131,95 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [user, subscriptionUpdated]);
 
+  // Render dashboard content or billing based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'billing':
+        return <Billing />;
+      case 'dashboard':
+      default:
+        return (
+          <>
+            {/* Subscription Status Section */}
+            {subscriptionMessage && (
+              <div className={`mb-4 p-4 rounded-lg border ${
+                subscriptionMessage.includes('Failed') || subscriptionMessage.includes('error')
+                  ? 'border-red-300 bg-red-50 text-red-700'
+                  : subscriptionMessage.includes('PRO')
+                  ? 'border-green-300 bg-green-50 text-green-700'
+                  : 'border-blue-300 bg-blue-50 text-blue-700'
+              }`}>
+                <p>{subscriptionMessage}</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-medium text-gray-700 mb-1">Total Summaries</h3>
+                <p className="text-3xl font-bold text-indigo-600">{summaryStats.total}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  All summaries you've created with LightRead
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h3 className="text-lg font-medium text-gray-700 mb-1">Recent Activity</h3>
+                <p className="text-3xl font-bold text-indigo-600">{summaryStats.lastWeek}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Summaries created in the last 7 days
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8">
+              <h2 className="dashboard-subtitle mb-4">Subscription</h2>
+              <button 
+                onClick={refreshSubscriptionStatus}
+                className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+              >
+                Check Subscription Status
+              </button>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="dashboard-subtitle">Quick Actions</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <a 
+                  href="/upload" 
+                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+                >
+                  <div className="p-3 bg-indigo-100 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Upload Document</h3>
+                    <p className="text-sm text-gray-500">Upload a PDF or text document</p>
+                  </div>
+                </a>
+                
+                <a 
+                  href="/paste" 
+                  className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
+                >
+                  <div className="p-3 bg-indigo-100 rounded-full mr-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-medium">Paste Text</h3>
+                    <p className="text-sm text-gray-500">Paste text for summarization</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </>
+        );
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="dashboard-page">
@@ -129,82 +237,36 @@ const Dashboard = () => {
   return (
     <div className="dashboard-page">
       <h1 className="dashboard-title">Dashboard</h1>
-
-      {/* Subscription Status Section */}
-      {subscriptionMessage && (
-        <div className={`mb-4 p-4 rounded-lg border ${
-          subscriptionMessage.includes('Failed') || subscriptionMessage.includes('error')
-            ? 'border-red-300 bg-red-50 text-red-700'
-            : subscriptionMessage.includes('PRO')
-            ? 'border-green-300 bg-green-50 text-green-700'
-            : 'border-blue-300 bg-blue-50 text-blue-700'
-        }`}>
-          <p>{subscriptionMessage}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <h3 className="text-lg font-medium text-gray-700 mb-1">Total Summaries</h3>
-          <p className="text-3xl font-bold text-indigo-600">{summaryStats.total}</p>
-          <p className="text-sm text-gray-500 mt-2">
-            All summaries you've created with LightRead
-          </p>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <h3 className="text-lg font-medium text-gray-700 mb-1">Recent Activity</h3>
-          <p className="text-3xl font-bold text-indigo-600">{summaryStats.lastWeek}</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Summaries created in the last 7 days
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-8">
-        <h2 className="dashboard-subtitle mb-4">Subscription</h2>
+      
+      {/* Navigation Tabs */}
+      <div className="dashboard-tabs mb-6">
         <button 
-          onClick={refreshSubscriptionStatus}
-          className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+          onClick={() => handleTabChange('dashboard')}
+          className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
         >
-          Check Subscription Status
+          Dashboard
+        </button>
+        <button 
+          onClick={() => handleTabChange('billing')}
+          className={`tab-button ${activeTab === 'billing' ? 'active' : ''}`}
+        >
+          Billing
+        </button>
+        <button 
+          onClick={() => handleTabChange('settings')}
+          className={`tab-button ${activeTab === 'settings' ? 'active' : ''}`}
+        >
+          Settings
+        </button>
+        <button 
+          onClick={() => handleTabChange('history')}
+          className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
+        >
+          History
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h2 className="dashboard-subtitle">Quick Actions</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-          <a 
-            href="/upload" 
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
-          >
-            <div className="p-3 bg-indigo-100 rounded-full mr-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-medium">Upload Document</h3>
-              <p className="text-sm text-gray-500">Upload a PDF or text document</p>
-            </div>
-          </a>
-          
-          <a 
-            href="/paste" 
-            className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-100 transition-colors"
-          >
-            <div className="p-3 bg-indigo-100 rounded-full mr-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-medium">Paste Text</h3>
-              <p className="text-sm text-gray-500">Paste text to summarize</p>
-            </div>
-          </a>
-        </div>
-      </div>
+      {renderContent()}
     </div>
   );
 };

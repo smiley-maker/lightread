@@ -156,40 +156,58 @@ def handle_checkout_session_completed(session):
         
         print(f"Retrieved customer: {customer.id} with email: {user_email}")
         
-        # Find the user by email in the auth.users table
-        # First try the auth.users table (where Supabase actually stores users)
-        user_response = supabase.from_('auth.users').select('id').eq('email', user_email).execute()
-        print(f"Supabase auth.users query response: {user_response}")
-        
-        # If that fails, try the users table
-        if not user_response.data or len(user_response.data) == 0:
-            user_response = supabase.from_('users').select('id').eq('email', user_email).execute()
-            print(f"Supabase users table query response: {user_response}")
+        # Modified approach to find the user
+        # Try first with the direct RPC to get user by email
+        try:
+            # Use the auth.api function directly if available
+            user_response = supabase.rpc('get_user_by_email', {'email_input': user_email}).execute()
+            print(f"User lookup via RPC: {user_response}")
             
-            # If still no user found, try a raw query to see which table has user data
-            if not user_response.data or len(user_response.data) == 0:
-                # Try a direct auth query
-                auth_response = supabase.auth.admin.list_users()
-                print(f"Auth users list response: {auth_response}")
+            if user_response.data and len(user_response.data) > 0:
+                user_id = user_response.data[0]['id']
+                print(f"Found user with ID: {user_id} via RPC")
+            else:
+                # Fallback to users table
+                print("RPC didn't return user, trying users table")
+                user_response = supabase.from_('users').select('id').eq('email', user_email).execute()
                 
-                # Find the user with matching email
-                matching_users = [u for u in auth_response.users if u.email == user_email]
-                if matching_users:
-                    user_id = matching_users[0].id
-                    print(f"Found user with ID: {user_id} in auth users list")
+                if user_response.data and len(user_response.data) > 0:
+                    user_id = user_response.data[0]['id']
+                    print(f"Found user with ID: {user_id} in users table")
                 else:
                     print(f"Error: User with email {user_email} not found in any database table")
-                    return
-        
-        if not user_response.data or len(user_response.data) == 0:
-            # Get user ID from the matching users we found in auth.admin.list_users
-            if 'user_id' not in locals():
-                print(f"Error: User with email {user_email} not found in the database")
-                return
-        else:
-            user_id = user_response.data[0]['id']
-            print(f"Found user with ID: {user_id}")
-        
+                    raise Exception(f"User with email {user_email} not found")
+        except Exception as e:
+            print(f"Error finding user: {str(e)}")
+            # Try a regular query to the users table
+            user_response = supabase.from_('users').select('id').eq('email', user_email).execute()
+            print(f"Direct users table query: {user_response}")
+            
+            if not user_response.data or len(user_response.data) == 0:
+                # As a last resort, try using the auth admin API
+                try:
+                    auth_response = supabase.auth.admin.list_users()
+                    print(f"Auth users list response type: {type(auth_response)}")
+                    
+                    if hasattr(auth_response, 'users') and auth_response.users:
+                        # Find the user with matching email
+                        matching_users = [u for u in auth_response.users if u.email == user_email]
+                        if matching_users:
+                            user_id = matching_users[0].id
+                            print(f"Found user with ID: {user_id} in auth users list")
+                        else:
+                            print(f"Error: User with email {user_email} not found in any database table")
+                            raise Exception(f"User with email {user_email} not found")
+                    else:
+                        print("Auth response has no users attribute or is empty")
+                        raise Exception("Auth API response format unexpected")
+                except Exception as auth_err:
+                    print(f"Auth API error: {str(auth_err)}")
+                    raise
+            else:
+                user_id = user_response.data[0]['id']
+                print(f"Found user with ID: {user_id} in users table")
+            
         # Check if user already has a subscription
         existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).eq('status', 'active').execute()
         print(f"Existing subscription query response: {existing_sub}")
