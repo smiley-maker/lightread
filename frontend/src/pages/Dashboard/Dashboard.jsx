@@ -88,21 +88,42 @@ const Dashboard = () => {
               console.log('Payment verified successfully');
               setSubscriptionMessage('Payment successful! Updating your subscription...');
               
-              // Fetch the latest subscription data
-              const { data, error } = await getUserSubscription(user.id);
+              // Force a delay to allow the server time to process the webhook
+              await new Promise(resolve => setTimeout(resolve, 2000));
               
-              if (error) {
-                console.error('Error fetching subscription after payment:', error);
-                setSubscriptionMessage('Payment successful, but there was an error updating your subscription. Please refresh the page.');
-              } else if (data) {
-                console.log('Subscription status after payment:', data);
-                setSubscriptionUpdated(true);
+              // Fetch the latest subscription data
+              try {
+                const { data, error } = await getUserSubscription(user.id);
                 
-                if (data.plan_type === 'pro') {
-                  setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
-                } else {
-                  setSubscriptionMessage('Your subscription has been updated.');
+                console.log('Refreshed subscription data:', data);
+                
+                if (error) {
+                  console.error('Error fetching subscription after payment:', error);
+                  setSubscriptionMessage('Payment successful, but there was an error updating your subscription. Please refresh the page.');
+                } else if (data) {
+                  console.log('Subscription status after payment:', data);
+                  setSubscriptionUpdated(true);
+                  
+                  if (data.plan_type === 'pro') {
+                    setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
+                  } else {
+                    // Manual refresh if the plan type isn't updated yet
+                    setSubscriptionMessage('Payment successful! Refreshing subscription status...');
+                    
+                    // Try one more time after a delay
+                    setTimeout(async () => {
+                      const { data: refreshedData } = await getUserSubscription(user.id);
+                      if (refreshedData && refreshedData.plan_type === 'pro') {
+                        setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
+                      } else {
+                        setSubscriptionMessage('Your payment was successful but your subscription might take a moment to update. Please refresh the page in a few minutes.');
+                      }
+                    }, 5000);
+                  }
                 }
+              } catch (fetchError) {
+                console.error('Error fetching subscription data:', fetchError);
+                setSubscriptionMessage('Payment successful, but there was an error fetching your subscription details. Please refresh the page.');
               }
             } else {
               console.log('Payment verification returned:', result);

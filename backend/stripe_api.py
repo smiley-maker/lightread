@@ -211,17 +211,73 @@ def verify_session(session_id):
         # Check if the payment was successful
         if session.payment_status == 'paid':
             print("Payment was successful, processing the completed checkout session")
-            # Process the successful checkout
-            result = handle_checkout_session_completed(session)
             
-            # If handle_checkout_session_completed returns a tuple, it's a response
-            if isinstance(result, tuple):
-                return result
+            # Get customer email from the session
+            customer_email = None
+            if hasattr(session, 'customer') and session.customer and hasattr(session.customer, 'email'):
+                customer_email = session.customer.email
+            elif hasattr(session, 'customer_email'):
+                customer_email = session.customer_email
+                
+            print(f"Customer email: {customer_email}")
+            
+            # Find user ID from email
+            user_id = None
+            if customer_email:
+                try:
+                    print("Looking up user in auth.users...")
+                    auth_response = supabase.auth.admin.list_users()
+                    
+                    for user in auth_response.users:
+                        if user.email == customer_email:
+                            user_id = user.id
+                            print(f"Found user with ID: {user_id} in auth users list")
+                            break
+                            
+                    if not user_id:
+                        print(f"User not found in auth.users with email: {customer_email}")
+                except Exception as auth_err:
+                    print(f"Error using auth API: {auth_err}")
+            
+            # If we found a user ID, update their subscription
+            if user_id and hasattr(session, 'subscription') and session.subscription:
+                try:
+                    # Get subscription details
+                    subscription = stripe.Subscription.retrieve(session.subscription)
+                    
+                    # Update or create subscription in database
+                    subscription_data = {
+                        'user_id': user_id,
+                        'stripe_customer_id': session.customer.id if hasattr(session, 'customer') else None,
+                        'stripe_subscription_id': session.subscription,
+                        'plan_type': 'pro',
+                        'status': 'active',
+                        'updated_at': datetime.utcnow().isoformat(),
+                        'end_date': datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                    }
+                    
+                    # Check if subscription exists
+                    existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
+                    
+                    if existing_sub.data and len(existing_sub.data) > 0:
+                        print(f"Updating existing subscription for user {user_id}")
+                        supabase.table('subscriptions').update(subscription_data).eq('user_id', user_id).execute()
+                    else:
+                        print(f"Creating new subscription for user {user_id}")
+                        subscription_data['created_at'] = datetime.utcnow().isoformat()
+                        supabase.table('subscriptions').insert(subscription_data).execute()
+                        
+                    print("Successfully updated subscription in database")
+                except Exception as db_err:
+                    print(f"Database error updating subscription: {db_err}")
+            
+            # Process the successful checkout
+            handle_checkout_session_completed(session)
             
             return jsonify({
                 'success': True,
                 'status': 'paid',
-                'customer_email': session.customer.email if hasattr(session, 'customer') and session.customer else None,
+                'customer_email': customer_email,
                 'subscription_id': session.subscription if hasattr(session, 'subscription') else None
             })
         elif session.payment_status == 'unpaid':
@@ -300,35 +356,31 @@ def handle_checkout_session_completed(session):
             
         print(f"\nLooking up user in database with email: {user_email}")
         
-        # Try looking up in the users table
-        user_response = supabase.table('users').select('*').eq('email', user_email).execute()
-        print(f"User lookup response: {user_response}")
-        
+        # Skip trying to look up in users table since it doesn't exist
+        # Go directly to auth.users
         user_id = None
-        if user_response.data and len(user_response.data) > 0:
-            user_id = user_response.data[0]['id']
-            print(f"Found user with ID: {user_id} in users table")
-        else:
-            print("User not found in users table, checking auth.users...")
-            try:
-                auth_response = supabase.auth.admin.list_users()
-                print(f"Auth response contains {len(auth_response.users)} users")
-                
-                for user in auth_response.users:
-                    print(f"Checking user: {user.email}")
-                    if user.email == user_email:
-                        user_id = user.id
-                        print(f"Found user with ID: {user_id} in auth users list")
-                        break
-                        
-                if not user_id:
-                    print(f"User not found in auth.users with email: {user_email}")
-                    return
-            except Exception as auth_err:
-                print(f"Error using auth API: {auth_err}")
-                import traceback
-                traceback.print_exc()
+        try:
+            print("Looking up user in auth.users...")
+            auth_response = supabase.auth.admin.list_users()
+            print(f"Auth response contains {len(auth_response.users)} users")
+            
+            user_found = False
+            for user in auth_response.users:
+                print(f"Checking user: {user.email}")
+                if user.email == user_email:
+                    user_id = user.id
+                    user_found = True
+                    print(f"Found user with ID: {user_id} in auth users list")
+                    break
+                    
+            if not user_found:
+                print(f"User not found in auth.users with email: {user_email}")
                 return
+        except Exception as auth_err:
+            print(f"Error using auth API: {auth_err}")
+            import traceback
+            traceback.print_exc()
+            return
         
         # Update or create subscription in database
         print(f"\nUpdating subscription in database for user ID: {user_id}")
@@ -348,10 +400,10 @@ def handle_checkout_session_completed(session):
         print(f"Subscription data to update: {subscription_data}")
         
         # Check if subscription exists
-        existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
-        print(f"Existing subscription check: {existing_sub}")
-        
         try:
+            existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
+            print(f"Existing subscription check: {existing_sub}")
+        
             if existing_sub.data and len(existing_sub.data) > 0:
                 print("Updating existing subscription...")
                 update_response = supabase.table('subscriptions').update(subscription_data).eq('user_id', user_id).execute()
