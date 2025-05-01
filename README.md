@@ -33,7 +33,7 @@ An AI-powered text summarization extension that helps you quickly digest content
 
 #### Development Build
 
-For local development with a local backend:
+For local development:
 
 ```bash
 npm run build:dev
@@ -104,9 +104,11 @@ Your privacy policy should be hosted on a stable URL that won't change, as chang
 │   ├── popup.html       # Popup UI HTML
 │   ├── config.js        # Generated config (not committed to Git)
 │   └── config.sample.js # Config template
-├── build.js             # Build script (not uploaded)
-├── package.json         # Project configuration (not uploaded)
-└── .env                 # Environment variables (not uploaded)
+├── build.js             # Build script
+├── package.json         # Project configuration
+├── frontend/            # Web app frontend code
+├── backend/             # API backend code
+└── .env                 # Environment variables (not uploaded or committed)
 ```
 
 ## License

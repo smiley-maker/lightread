@@ -1,0 +1,40 @@
+# Source control
+.git
+.github
+.gitignore
+
+# Environment
+.env
+.env.*
+env.example
+
+# Build artifacts
+dist/
+*.zip
+lightread-extension.zip
+
+# Development files
+frontend/
+backend/
+node_modules/
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+__tests__/
+test/
+tests/
+
+# Documentation files
+docs/
+
+# Configuration files that shouldn't be published
+.eslintrc.js
+.prettierrc
+.babelrc
+webpack.config.js
+tsconfig.json 

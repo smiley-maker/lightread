@@ -6,9 +6,12 @@
 # Generated files
 extension/config.js
 lightread-extension.zip
+dist/
+*.zip
 
 # Dependencies
 node_modules/
+**/node_modules/
 
 # IDE files
 .vscode/
@@ -27,6 +30,18 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Build related files
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.bak
+
 # IDE/Editor specific files
 .vscode/
 .idea/
@@ -36,10 +51,6 @@ __pycache__/
 # Operating System specific files
 .DS_Store
 Thumbs.db
-
-# Build related files
-dist/
-node_modules/
 
 # Extension configuration
 extension/config.js
