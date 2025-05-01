@@ -58,10 +58,15 @@ const AuthForm = ({ onSuccess }) => {
         result = await signup(email, password);
         
         if (!result.error) {
-          // For signup, we'll redirect to the dashboard with plan selection tab
+          // For signup, store the email and redirect to the dashboard with billing tab
           localStorage.setItem('userEmail', email);
-          console.log('Successfully signed up, redirecting to plan selection');
-          navigate('/dashboard?tab=billing', { replace: true });
+          console.log('Successfully signed up, redirecting to dashboard billing tab');
+          
+          // Adding a small delay to ensure the user is fully created before redirecting
+          setTimeout(() => {
+            navigate('/dashboard?tab=billing');
+          }, 500);
+          
           return;
         }
       } else {
@@ -71,13 +76,14 @@ const AuthForm = ({ onSuccess }) => {
       if (result.error) {
         setError(result.error.message);
       } else {
-        if (onSuccess) {
-          onSuccess(result.data);
-        }
+        // For login, we redirect to the dashboard normally
+        console.log('Login successful, redirecting to dashboard');
+        localStorage.setItem('userEmail', email);
+        navigate('/dashboard');
       }
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
-      console.error(err);
+      console.error('Authentication error:', err);
+      setError('An error occurred during authentication. Please try again.');
     } finally {
       setLoading(false);
     }

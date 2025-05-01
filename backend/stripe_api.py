@@ -3,7 +3,8 @@ import stripe
 from datetime import datetime, timedelta
 from config import (
     STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET
+    STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRICE_ID
 )
 from supabase import create_client
 import os
@@ -19,14 +20,16 @@ supabase = create_client(
 
 @stripe_api.route('/create-checkout-session', methods=['POST'])
 def create_checkout_session():
+    """
+    Create a Stripe checkout session for subscription.
+    """
     try:
-        data = request.get_json()
-        price_id = data.get('priceId')
-        customer_email = data.get('email')
+        data = request.json
+        customer_email = data.get('email', '')
+        price_id = STRIPE_PRICE_ID
         
-        if not price_id:
-            return jsonify({'error': 'Price ID is required'}), 400
-            
+        print(f"Creating checkout session for email: {customer_email} and price ID: {price_id}")
+        
         # Create Stripe checkout session
         session = stripe.checkout.Session.create(
             payment_method_types=['card'],
@@ -35,14 +38,19 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url='https://www.lightread.xyz/dashboard?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='https://www.lightread.xyz/dashboard',
+            success_url='https://www.lightread.xyz/dashboard?tab=billing&session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://www.lightread.xyz/dashboard?tab=billing',
             customer_email=customer_email,
         )
         
-        return jsonify({'sessionId': session.id})
+        print(f"Created checkout session: {session.id} for {customer_email}")
+        
+        # Return the session ID for the frontend to use
+        return jsonify({'id': session.id}), 200
     except Exception as e:
         print(f"Error creating checkout session: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @stripe_api.route('/create-portal-session', methods=['POST'])

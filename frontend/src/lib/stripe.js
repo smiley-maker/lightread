@@ -21,48 +21,41 @@ export const createCheckoutSession = async (priceId) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'cors', // Explicitly set CORS mode
-      credentials: 'include', // Include cookies if needed
+      mode: 'cors',
+      credentials: 'include',
       body: JSON.stringify({ 
-        priceId,
-        email: userEmail // Move email to the request body
+        email: userEmail,
+        priceId: priceId
       }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'No error text available');
-      
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch (e) {
-        errorData = { error: errorText || 'Unknown error' };
-      }
-      
-      console.error('Checkout error response:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData,
-        headers: Object.fromEntries([...response.headers.entries()])
-      });
-      
-      throw new Error(errorData.error || `Server responded with ${response.status}: ${response.statusText}`);
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`Error response from server: ${errorText}`);
+      throw new Error(`HTTP error ${response.status}: ${errorText}`);
     }
 
-    const responseData = await response.json();
-    console.log('Checkout session created:', responseData);
+    const session = await response.json();
+    console.log('Checkout session created:', session);
     
-    const { sessionId } = responseData;
+    // Load Stripe and redirect to checkout
     const stripe = await stripePromise;
     
-    // Redirect to Stripe Checkout
-    console.log(`Redirecting to Stripe checkout with session ID: ${sessionId}`);
-    const { error } = await stripe.redirectToCheckout({ sessionId });
-    
-    if (error) {
-      console.error('Stripe redirect error:', error);
-      throw error;
+    if (!stripe) {
+      throw new Error('Failed to load Stripe');
     }
+    
+    // This will redirect to Stripe's checkout page
+    const result = await stripe.redirectToCheckout({
+      sessionId: session.id,
+    });
+
+    if (result.error) {
+      console.error('Stripe redirect error:', result.error);
+      throw new Error(result.error.message);
+    }
+    
+    return { success: true };
   } catch (error) {
     console.error('Error creating checkout session:', error);
     throw error;
