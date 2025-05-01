@@ -1,8 +1,0 @@
-Flask
-flask_cors
-google-generativeai
-python-dotenv
-supabase
-stripe
-python-jose[cryptography]
-gunicorn
