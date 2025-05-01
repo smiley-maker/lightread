@@ -27,8 +27,11 @@ def create_checkout_session():
     try:
         data = request.json
         customer_email = data.get('email', '')
-        price_id = STRIPE_PRICE_ID
+        price_id = data.get('priceId', STRIPE_PRICE_ID)  # Use priceId from request, fallback to env var
         
+        if not price_id:
+            return jsonify({'error': 'Price ID is required'}), 400
+            
         print(f"Creating checkout session for email: {customer_email} and price ID: {price_id}")
         
         # Create Stripe checkout session
@@ -90,13 +93,22 @@ def webhook():
     sig_header = request.headers.get('Stripe-Signature')
     
     # For debugging, log the request info
-    print("==================== REQUEST INFO ====================")
+    print("==================== WEBHOOK REQUEST ====================")
     print(f"Request data: {payload.decode('utf-8')}")
     print(f"Signature header: {sig_header}")
     print("==================== END REQUEST INFO ====================")
     print(f"Received webhook with signature: {sig_header[:10]}...")
     
     try:
+        # Verify the webhook signature
+        if not sig_header:
+            print("No Stripe-Signature header found")
+            return jsonify({'error': 'No signature header'}), 400
+            
+        if not config.STRIPE_WEBHOOK_SECRET:
+            print("STRIPE_WEBHOOK_SECRET is not set")
+            return jsonify({'error': 'Webhook secret not configured'}), 500
+            
         # Construct the event using the payload and signature
         event = stripe.Webhook.construct_event(
             payload, sig_header, config.STRIPE_WEBHOOK_SECRET
@@ -106,14 +118,17 @@ def webhook():
         # Handle different event types
         if event.type == 'checkout.session.completed':
             session = event.data.object
+            print(f"Processing checkout.session.completed for session: {session.id}")
             # Process the checkout session
             handle_checkout_session_completed(session)
         elif event.type == 'customer.subscription.updated':
             subscription = event.data.object
+            print(f"Processing customer.subscription.updated for subscription: {subscription.id}")
             # Update subscription status
             handle_subscription_updated(subscription)
         elif event.type == 'customer.subscription.deleted':
             subscription = event.data.object
+            print(f"Processing customer.subscription.deleted for subscription: {subscription.id}")
             # Mark subscription as cancelled
             handle_subscription_deleted(subscription)
         elif event.type == 'invoice.paid':
@@ -149,6 +164,8 @@ def webhook():
     except Exception as e:
         # Other error
         print(f"Webhook error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'status': 'failure', 'error': str(e)}), 500
 
 @stripe_api.route('/verify-session/<session_id>', methods=['GET'])
