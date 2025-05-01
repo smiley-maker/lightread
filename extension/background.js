@@ -13,6 +13,35 @@ let authState = {
   user: null
 };
 
+// Rate limiting configuration
+const rateLimits = {
+  summarize: {
+    maxRequests: 5,    // Max 5 requests
+    timeWindow: 60000, // In 1 minute (60000ms)
+    requests: []       // Timestamp log of requests
+  }
+};
+
+// Function to check if action is rate limited
+function isRateLimited(action) {
+  const now = Date.now();
+  const limit = rateLimits[action];
+  
+  if (!limit) return false;
+  
+  // Remove timestamps outside the time window
+  limit.requests = limit.requests.filter(time => time > now - limit.timeWindow);
+  
+  // Check if we've hit the limit
+  if (limit.requests.length >= limit.maxRequests) {
+    return true;
+  }
+  
+  // Add current request timestamp
+  limit.requests.push(now);
+  return false;
+}
+
 // Load auth state from storage
 chrome.storage.local.get(['token', 'user'], (result) => {
   if (result.token && result.user) {
@@ -77,6 +106,11 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizeText" && info.selectionText) {
     try {
+      // Check for rate limiting
+      if (isRateLimited('summarize')) {
+        throw new Error('You are sending too many requests. Please wait a moment before trying again.');
+      }
+
       // Check auth state
       if (!authState.isLoggedIn) {
         // Try to load auth state from storage
@@ -96,6 +130,21 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       const settings = await getUserSettings();
       const summaryLength = settings?.preferred_summary_length || 'medium';
 
+      // Basic input validation
+      const selectedText = info.selectionText || "";
+      if (!selectedText.trim()) {
+        throw new Error('Please select some text to summarize');
+      }
+      
+      // Check if text is too long or too short
+      if (selectedText.length > 50000) {
+        throw new Error('Selected text is too long (max 50,000 characters)');
+      }
+      
+      if (selectedText.length < 100) {
+        throw new Error('Selected text is too short (min 100 characters)');
+      }
+
       const response = await fetch(`${SERVER_URL}/summarize`, {
         method: 'POST',
         headers: {
@@ -103,7 +152,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           'Authorization': `Bearer ${authState.token}`
         },
         body: JSON.stringify({
-          text: info.selectionText,
+          text: selectedText,
           source_url: tab.url,
           length: summaryLength
         }),
@@ -120,9 +169,19 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
             return chrome.contextMenus.onClicked.dispatch(info, tab);
           }
           throw new Error('Session expired. Please login again.');
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        } else if (response.status >= 500) {
+          throw new Error('Server error. Please try again later or contact support if the issue persists.');
         }
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate summary');
+        
+        // Try to parse error response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to generate summary (${response.status})`);
+        } catch (jsonError) {
+          throw new Error(`Failed to generate summary (${response.status})`);
+        }
       }
 
       const data = await response.json();
@@ -131,7 +190,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       const summaryData = {
         ...data,
         source_url: tab.url,
-        character_count: info.selectionText.length
+        character_count: selectedText.length
       };
 
       // Show the summary popup
@@ -143,7 +202,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           chrome.runtime.getURL("logo.png"), 
           {
             ...summaryData,
-            original_text: info.selectionText
+            original_text: selectedText
           },
           authState.token,
           SERVER_URL
@@ -417,6 +476,28 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       saveButton.textContent = 'Saving...';
       saveButton.disabled = true;
       
+      // Local rate limiting check
+      const checkLocalRateLimit = () => {
+        const now = Date.now();
+        // Check if we have a timestamp in local storage
+        const lastRequestStr = localStorage.getItem('lastSaveRequest');
+        if (lastRequestStr) {
+          const lastRequest = parseInt(lastRequestStr, 10);
+          // If last request was less than 12 seconds ago, rate limit
+          if (now - lastRequest < 12000) {
+            return true;
+          }
+        }
+        // Store current timestamp
+        localStorage.setItem('lastSaveRequest', now.toString());
+        return false;
+      };
+      
+      // Check for rate limiting
+      if (checkLocalRateLimit()) {
+        throw new Error('You are sending too many requests. Please wait a moment before trying again.');
+      }
+      
       let settings = { save_source_url: true }; // Default value
       
       try {
@@ -473,9 +554,19 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
             }
           });
           return;
+        } else if (response.status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        } else if (response.status >= 500) {
+          throw new Error('Server error. Please try again later or contact support if the issue persists.');
         }
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save summary');
+        
+        // Try to parse error response
+        try {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to save summary (${response.status})`);
+        } catch (jsonError) {
+          throw new Error(`Failed to save summary (${response.status})`);
+        }
       }
 
       saveButton.textContent = 'Saved!';
@@ -486,10 +577,29 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
     } catch (error) {
       console.error('Error saving summary:', error);
       saveButton.textContent = 'Error';
+      // Show the error message to the user
+      const errorToast = document.createElement('div');
+      errorToast.textContent = error.message || 'Failed to save summary';
+      errorToast.style.cssText = `
+        position: absolute;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #f44336;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 10001;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      `;
+      popup.appendChild(errorToast);
+      
       setTimeout(() => {
+        errorToast.remove();
         saveButton.textContent = 'Save';
         saveButton.disabled = false;
-      }, 2000);
+      }, 3000);
     }
   };
 
@@ -631,8 +741,45 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
           // Add regenerate function
           const regenerateSummary = async (tone, difficulty) => {
             try {
+              // Local rate limiting check instead of using background isRateLimited
+              const checkLocalRateLimit = () => {
+                const now = Date.now();
+                // Check if we have a timestamp in local storage
+                const lastRequestStr = localStorage.getItem('lastSummaryRequest');
+                if (lastRequestStr) {
+                  const lastRequest = parseInt(lastRequestStr, 10);
+                  // If last request was less than 12 seconds ago, rate limit
+                  if (now - lastRequest < 12000) {
+                    return true;
+                  }
+                }
+                // Store current timestamp
+                localStorage.setItem('lastSummaryRequest', now.toString());
+                return false;
+              };
+              
+              // Check for rate limiting
+              if (checkLocalRateLimit()) {
+                throw new Error('You are sending too many requests. Please wait a moment before trying again.');
+              }
+              
               if (!summaryData.original_text) {
                 throw new Error('Unable to regenerate summary: original text not available');
+              }
+              
+              // Basic input validation
+              const originalText = summaryData.original_text || "";
+              if (!originalText.trim()) {
+                throw new Error('No text to summarize');
+              }
+              
+              // Check if text is too long or too short
+              if (originalText.length > 50000) {
+                throw new Error('Text is too long (max 50,000 characters)');
+              }
+              
+              if (originalText.length < 100) {
+                throw new Error('Text is too short (min 100 characters)');
               }
   
               summaryText.textContent = 'Generating new summary...';
@@ -646,7 +793,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
                   'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                  text: summaryData.original_text,
+                  text: originalText,
                   override_tone: tone,
                   override_difficulty: difficulty
                 }),
@@ -656,11 +803,22 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
               });
   
               if (!response.ok) {
-                const errorData = await response.json();
-                if (errorData.code === 'PRO_FEATURE') {
-                  throw new Error('Summary regeneration is only available for pro users. Please upgrade to pro to use this feature.');
+                if (response.status === 429) {
+                  throw new Error('Rate limit exceeded. Please try again later.');
+                } else if (response.status >= 500) {
+                  throw new Error('Server error. Please try again later.');
                 }
-                throw new Error(errorData.error || 'Failed to generate summary');
+                
+                // Try to parse error response
+                try {
+                  const errorData = await response.json();
+                  if (errorData.code === 'PRO_FEATURE') {
+                    throw new Error('Summary regeneration is only available for pro users. Please upgrade to pro to use this feature.');
+                  }
+                  throw new Error(errorData.error || `Failed to generate summary (${response.status})`);
+                } catch (jsonError) {
+                  throw new Error(`Failed to generate summary (${response.status})`);
+                }
               }
               
               const data = await response.json();

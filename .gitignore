@@ -1,14 +1,24 @@
-# Environment variables
+# Environment files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.list
-.env.local.list
-.env.production
-.env.development
-.env.test
+**/.env
+**/config.js
+
+# Generated files
+extension/config.js
+lightread-extension.zip
+
+# Dependencies
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
 
 # Python virtual environment
 venv/

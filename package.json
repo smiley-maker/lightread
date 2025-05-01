@@ -1,21 +1,15 @@
 {
-  "name": "lightread",
+  "name": "lightread-extension",
   "version": "1.0.0",
-  "description": "AI-powered text summarization extension",
+  "description": "LightRead Chrome Extension",
   "scripts": {
-    "build:dev": "node scripts/build-config.js development",
-    "build:prod": "node scripts/build-config.js production",
-    "build": "npm run build:dev"
-  },
-  "devDependencies": {
-    "dotenv": "^16.4.5",
-    "dotenv-webpack": "^8.1.0",
-    "webpack": "^5.99.5",
-    "webpack-cli": "^6.0.1"
+    "build:dev": "node build.js development",
+    "build:prod": "node build.js production",
+    "clean": "rm -rf dist",
+    "prepare-dist": "mkdir -p dist && cp -r extension/* dist/ && rm -f dist/config.sample.js",
+    "package": "npm run build:prod && npm run clean && npm run prepare-dist && cd dist && zip -r ../lightread-extension.zip * && cd .. && echo 'Package created: lightread-extension.zip'"
   },
   "dependencies": {
-    "chart.js": "^4.4.9",
-    "react-chartjs-2": "^5.3.0",
-    "stripe": "^18.0.0"
+    "dotenv": "^16.3.1"
   }
 }

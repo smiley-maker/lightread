@@ -1,68 +1,114 @@
 # LightRead Chrome Extension
 
-LightRead is a Chrome extension that uses AI to instantly summarize any selected text on the web. Whether you're skimming news articles, doing research, or just curious about a long blog post, LightRead helps you get to the point — fast.
+An AI-powered text summarization extension that helps you quickly digest content from any webpage.
 
-## Current Features
+## Development Setup
 
-- **Text Summarization**: Select any text on a webpage and get a concise summary using AI.
-- **Context Menu Integration**: Right-click to access the summarization feature directly from the context menu.
-- **Popup Display**: If the webpage's Content Security Policy (CSP) prevents script injection, the summary is displayed in the extension's popup.
-- **Copy to Clipboard**: Easily copy the generated summary to your clipboard.
-- **Tunable Parameters**: Options for tone, length, difficulty, and more. 
-- **User Preferences**: Allow users to customize summarization settings and preferences.
-- **Summary History**: Allows users to save their summaries to a personal dashbaord for later viewing. 
+### Prerequisites
 
-## Upcoming Features
+- Node.js (v14+)
+- npm
 
-- **Enhanced Summarization Models**: Integration with more advanced AI models for improved summaries.
-- **PDF Support**: Easily summarize parts of PDFs, as well as web pages. 
-- **TTS Playback**: Listen to your summary using text-to-speech capabilities. 
-- **Follow Up Questions**: Ask a follow up question based on the summarized info. 
+### Installation
 
-# Project Structure
-
-The project is organized into two main parts:
-
-- **backend/**: Contains the server-side code and configuration.
-- **extension/**: Contains the Chrome extension files.
-
-## Backend
-
-The backend is a Flask server that handles requests from the Chrome extension.
-
-### Running the Backend
-
-1. Navigate to the `backend` directory:
+1. Clone the repository:
    ```bash
-   cd backend
+   git clone <repository-url>
+   cd lightread
    ```
 
-2. Build the Docker image:
+2. Install dependencies:
    ```bash
-   docker build -t myapp-backend .
+   npm install
    ```
 
-3. Run the Docker container:
+3. Create your environment configuration:
    ```bash
-   docker run -p 3000:3000 myapp-backend
+   cp env.example .env
    ```
 
-## Extension
+4. Edit the `.env` file and set your server URLs.
 
-The extension is a Chrome extension that interacts with the backend server.
+### Building the Extension
 
-### Installing the Extension
+#### Development Build
 
-1. Navigate to the `extension` directory.
-2. Load the extension in Chrome:
-   - Open Chrome and go to `chrome://extensions/`.
-   - Enable "Developer mode".
-   - Click "Load unpacked" and select the `extension` directory.
+For local development with a local backend:
 
-## Environment Variables
+```bash
+npm run build:dev
+```
 
-Ensure that the `.env` file in the `backend` directory is configured with the necessary environment variables.
+This will generate the `extension/config.js` file with the development server URL and update the manifest.json.
 
----
+#### Production Build
 
-🔒 This project is proprietary. See the [LICENSE](./LICENSE) for details.
+For production deployment:
+
+```bash
+npm run build:prod
+```
+
+This requires a `PROD_SERVER_URL` to be set in your `.env` file.
+
+### Packaging for Chrome Web Store
+
+To create a ZIP file for the Chrome Web Store:
+
+```bash
+npm run package
+```
+
+This will:
+1. Run the production build
+2. Create a clean distribution folder 
+3. Copy the extension files to the distribution folder
+4. Remove source files that shouldn't be in the package
+5. Generate a ZIP file ready for upload
+
+The final package will be located at `./lightread-extension.zip`.
+
+## Security Considerations
+
+### Environment Variables
+
+- `.env` files are never included in the extension package
+- Server URLs are injected at build time into the `config.js` file
+- The build process will fail if required environment variables are missing
+
+### Sensitive Files
+
+The following files are not included in the extension package:
+- `.env` and any other environment files
+- `build.js` and other build scripts
+- Source code and development files
+
+### Privacy Policy
+
+You must provide a privacy policy URL when submitting your extension to the Chrome Web Store. Ensure your privacy policy addresses:
+
+- What data is collected
+- How data is used
+- User control over data
+- Data retention policies
+- Third-party sharing (if any)
+
+Your privacy policy should be hosted on a stable URL that won't change, as changing the privacy policy URL requires a new submission to the Chrome Web Store.
+
+## Project Structure
+
+```
+├── extension/           # Extension source code (uploaded to Chrome Web Store)
+│   ├── background.js    # Background script
+│   ├── popup.js         # Popup UI script
+│   ├── popup.html       # Popup UI HTML
+│   ├── config.js        # Generated config (not committed to Git)
+│   └── config.sample.js # Config template
+├── build.js             # Build script (not uploaded)
+├── package.json         # Project configuration (not uploaded)
+└── .env                 # Environment variables (not uploaded)
+```
+
+## License
+
+[License information]

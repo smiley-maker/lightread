@@ -1,17 +1,15 @@
 {
   "manifest_version": 3,
   "name": "LightRead",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "With just a click, LightRead uses AI to instantly summarize any selected text on the web. Whether you're skimming news articles, doing research, or just curious about a long blog post, LightRead helps you get to the point — fast.",
   "permissions": [
     "contextMenus",
     "scripting",
     "activeTab",
-    "storage",
-    "identity"
+    "storage"
   ],
   "host_permissions": [
-    "http://localhost:3000/*",
     "https://lightread-backend-636fc1215e35.herokuapp.com/*"
   ],
   "background": {
@@ -31,8 +29,18 @@
     "48": "icon48.png",
     "128": "icon128.png"
   },
-  "web_accessible_resources": [{
-    "resources": ["logo.png", "logo_light.png"],
-    "matches": ["<all_urls>"]
-  }]
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "logo.png",
+        "logo_light.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' https://lightread-backend-636fc1215e35.herokuapp.com https://localhost:*;"
+  }
 }
