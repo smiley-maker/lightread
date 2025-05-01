@@ -1,4 +1,84 @@
-const SERVER_URL = 'http://localhost:3000';
+// Import configuration
+import config from './config.js';
+
+// Use the SERVER_URL from config
+const SERVER_URL = config.SERVER_URL;
+
+// Helper function for fetch requests with proper CORS and error handling
+async function fetchWithAuth(endpoint, options = {}) {
+  const { token } = await chrome.storage.local.get('token');
+  
+  // Default headers with auth token if available
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(options.headers || {})
+  };
+
+  // Merge options with defaults
+  const fetchOptions = {
+    ...options,
+    headers,
+    mode: 'cors',
+    credentials: 'same-origin'
+  };
+
+  try {
+    const response = await fetch(`${SERVER_URL}${endpoint}`, fetchOptions);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Token might be expired, try to refresh
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          // Try again with new token
+          return fetchWithAuth(endpoint, options);
+        } else {
+          throw new Error('Session expired. Please login again.');
+        }
+      }
+      
+      // Try to parse error message from response
+      try {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || `Request failed with status: ${response.status}`);
+      } catch (parseError) {
+        throw new Error(`Request failed with status: ${response.status}`);
+      }
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching ${endpoint}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to refresh token
+async function refreshToken() {
+  try {
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) return false;
+    
+    const response = await fetch(`${SERVER_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
+    });
+    
+    if (!response.ok) return false;
+    
+    const data = await response.json();
+    await chrome.storage.local.set({ token: data.token });
+    return true;
+  } catch (error) {
+    console.error('Error refreshing token:', error);
+    return false;
+  }
+}
 
 // Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
@@ -37,19 +117,9 @@ document.getElementById('closeButton').addEventListener('click', () => {
 async function fetchDropdownOptions(token) {
     try {
         // Get enum values from Supabase
-        const response = await fetch(`${SERVER_URL}/rpc/get_enum_values`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
+        const enumData = await fetchWithAuth('/rpc/get_enum_values', {
+            method: 'POST'
         });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch enum values: ${response.status}`);
-        }
-
-        const enumData = await response.json();
         
         // Process the enum values into our options format
         const options = {
@@ -86,116 +156,94 @@ async function loadUserData() {
         if (!token) return;
 
         // Load settings
-        const settingsResponse = await fetch(`${SERVER_URL}/user/settings`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const settings = await fetchWithAuth('/user/settings');
+        
+        // Load dropdown options
+        const options = await fetchDropdownOptions(token);
+        if (options) {
+            // Populate summary length options from enum
+            const summaryLengthSelect = document.getElementById('summaryLength');
+            summaryLengthSelect.innerHTML = options.summary_length.map(length => 
+                `<option value="${length}">${length}</option>`
+            ).join('');
+            summaryLengthSelect.value = settings.preferred_summary_length;
 
-        if (settingsResponse.ok) {
-            const settings = await settingsResponse.json();
-            
-            // Load dropdown options
-            const options = await fetchDropdownOptions(token);
-            if (options) {
-                // Populate summary length options from enum
-                const summaryLengthSelect = document.getElementById('summaryLength');
-                summaryLengthSelect.innerHTML = options.summary_length.map(length => 
-                    `<option value="${length}">${length}</option>`
-                ).join('');
-                summaryLengthSelect.value = settings.preferred_summary_length;
+            // Populate theme options from enum
+            const themeSelect = document.getElementById('theme');
+            themeSelect.innerHTML = options.theme_type.map(theme => 
+                `<option value="${theme}">${theme.charAt(0).toUpperCase() + theme.slice(1)}</option>`
+            ).join('');
+            themeSelect.value = settings.theme;
 
-                // Populate theme options from enum
-                const themeSelect = document.getElementById('theme');
-                themeSelect.innerHTML = options.theme_type.map(theme => 
-                    `<option value="${theme}">${theme.charAt(0).toUpperCase() + theme.slice(1)}</option>`
-                ).join('');
-                themeSelect.value = settings.theme;
+            // Populate summary tone options from enum
+            const summaryToneSelect = document.getElementById('summaryTone');
+            summaryToneSelect.innerHTML = options.summary_tone.map(tone => 
+                `<option value="${tone}">${tone.charAt(0).toUpperCase() + tone.slice(1)}</option>`
+            ).join('');
+            summaryToneSelect.value = settings.summary_tone;
 
-                // Populate summary tone options from enum
-                const summaryToneSelect = document.getElementById('summaryTone');
-                summaryToneSelect.innerHTML = options.summary_tone.map(tone => 
-                    `<option value="${tone}">${tone.charAt(0).toUpperCase() + tone.slice(1)}</option>`
-                ).join('');
-                summaryToneSelect.value = settings.summary_tone;
+            // Populate summary difficulty options from enum
+            const summaryDifficultySelect = document.getElementById('summaryDifficulty');
+            summaryDifficultySelect.innerHTML = options.summary_difficulty.map(difficulty => 
+                `<option value="${difficulty}">${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</option>`
+            ).join('');
+            summaryDifficultySelect.value = settings.summary_difficulty;
 
-                // Populate summary difficulty options from enum
-                const summaryDifficultySelect = document.getElementById('summaryDifficulty');
-                summaryDifficultySelect.innerHTML = options.summary_difficulty.map(difficulty => 
-                    `<option value="${difficulty}">${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</option>`
-                ).join('');
-                summaryDifficultySelect.value = settings.summary_difficulty;
+            // Set save source URL setting
+            const saveSourceUrlSelect = document.getElementById('saveSourceUrl');
+            saveSourceUrlSelect.value = settings.save_source_url ? 'true' : 'false';
 
-                // Set save source URL setting
-                const saveSourceUrlSelect = document.getElementById('saveSourceUrl');
-                saveSourceUrlSelect.value = settings.save_source_url ? 'true' : 'false';
-
-                applyTheme(settings.theme);
-            }
+            applyTheme(settings.theme);
         }
 
         // Load user limits (includes plan type)
-        const limitsResponse = await fetch(`${SERVER_URL}/user/limits`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (limitsResponse.ok) {
-            const limits = await limitsResponse.json();
-            console.log('Received limits:', limits); // Debug log
-            
-            // Store the plan type and daily limit for later use
-            window.userPlan = {
-                type: limits?.plan_type || 'free',
-                dailyLimit: limits?.daily_summaries || 5,
-                maxTextLength: limits?.max_text_length || 10000
-            };
-            
-            // Update plan text in account tab with null check
-            const planType = limits?.plan_type || 'free';
-            document.getElementById('userPlan').textContent = planType.charAt(0).toUpperCase() + planType.slice(1);
-            
-            // Update plan limits display with null checks
-            document.getElementById('dailyLimit').textContent = limits?.daily_summaries || 5;
-            document.getElementById('maxTextLength').textContent = (limits?.max_text_length || 10000).toLocaleString();
-            
-            // Show/hide pro-only settings and upgrade button
-            const proOnlyElements = document.querySelectorAll('.pro-only');
-            const upgradeButton = document.getElementById('upgradeButton');
-            if (planType === 'pro') {
-                proOnlyElements.forEach(el => {
-                    el.style.display = 'block';
-                    // Enable all selects inside pro-only elements
-                    el.querySelectorAll('select').forEach(sel => sel.disabled = false);
-                });
-                upgradeButton.style.display = 'none';
-            } else {
-                proOnlyElements.forEach(el => {
-                    el.style.display = 'none';
-                    // Disable all selects inside pro-only elements
-                    el.querySelectorAll('select').forEach(sel => sel.disabled = true);
-                });
-                upgradeButton.style.display = 'block';
-            }
-            // Ensure all non-pro-only selects are enabled for free users
-            document.querySelectorAll('.settings-option:not(.pro-only) select').forEach(sel => sel.disabled = false);
+        const limits = await fetchWithAuth('/user/limits');
+        
+        console.log('Received limits:', limits); // Debug log
+        
+        // Store the plan type and daily limit for later use
+        window.userPlan = {
+            type: limits?.plan_type || 'free',
+            dailyLimit: limits?.daily_summaries || 5,
+            maxTextLength: limits?.max_text_length || 10000
+        };
+        
+        // Update plan text in account tab with null check
+        const planType = limits?.plan_type || 'free';
+        document.getElementById('userPlan').textContent = planType.charAt(0).toUpperCase() + planType.slice(1);
+        
+        // Update plan limits display with null checks
+        document.getElementById('dailyLimit').textContent = limits?.daily_summaries || 5;
+        document.getElementById('maxTextLength').textContent = (limits?.max_text_length || 10000).toLocaleString();
+        
+        // Show/hide pro-only settings and upgrade button
+        const proOnlyElements = document.querySelectorAll('.pro-only');
+        const upgradeButton = document.getElementById('upgradeButton');
+        if (planType === 'pro') {
+            proOnlyElements.forEach(el => {
+                el.style.display = 'block';
+                // Enable all selects inside pro-only elements
+                el.querySelectorAll('select').forEach(sel => sel.disabled = false);
+            });
+            upgradeButton.style.display = 'none';
+        } else {
+            proOnlyElements.forEach(el => {
+                el.style.display = 'none';
+                // Disable all selects inside pro-only elements
+                el.querySelectorAll('select').forEach(sel => sel.disabled = true);
+            });
+            upgradeButton.style.display = 'block';
         }
+        // Ensure all non-pro-only selects are enabled for free users
+        document.querySelectorAll('.settings-option:not(.pro-only) select').forEach(sel => sel.disabled = false);
 
         // Load usage
-        const usageResponse = await fetch(`${SERVER_URL}/user/usage`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (usageResponse.ok) {
-            const usage = await usageResponse.json();
-            const dailyLimit = window.userPlan?.dailyLimit || 5; // Fallback to 5 if not loaded
-            const progress = (usage.summaries_count / dailyLimit) * 100;
-            document.getElementById('usageProgress').style.width = `${progress}%`;
-            document.getElementById('usageText').textContent = `${usage.summaries_count}/${dailyLimit} summaries used today`;
-        }
+        const usage = await fetchWithAuth('/user/usage');
+        
+        const dailyLimit = window.userPlan?.dailyLimit || 5; // Fallback to 5 if not loaded
+        const progress = (usage.summaries_count / dailyLimit) * 100;
+        document.getElementById('usageProgress').style.width = `${progress}%`;
+        document.getElementById('usageText').textContent = `${usage.summaries_count}/${dailyLimit} summaries used today`;
     } catch (error) {
         console.error('Error loading user data:', error);
     }
@@ -204,12 +252,13 @@ async function loadUserData() {
 // Save settings
 document.getElementById('saveSettings').addEventListener('click', async () => {
     try {
-        const { token } = await chrome.storage.local.get('token');
-        if (!token) {
-            document.getElementById('settingsMessage').textContent = 'Please login to save settings';
-            return;
-        }
-
+        const saveButton = document.getElementById('saveSettings');
+        const settingsMessage = document.getElementById('settingsMessage');
+        
+        saveButton.disabled = true;
+        saveButton.textContent = 'Saving...';
+        settingsMessage.textContent = '';
+        
         const settings = {
             preferred_summary_length: document.getElementById('summaryLength').value,
             theme: document.getElementById('theme').value,
@@ -218,57 +267,18 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
             save_source_url: document.getElementById('saveSourceUrl').value === 'true'
         };
 
-        const response = await fetch(`${SERVER_URL}/user/settings`, {
+        await fetchWithAuth('/user/settings', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
             body: JSON.stringify(settings)
         });
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                // Try to refresh token
-                chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' }, async (response) => {
-                    if (response?.success) {
-                        // Retry save with new token
-                        const { token: newToken } = await chrome.storage.local.get('token');
-                        if (newToken) {
-                            const retryResponse = await fetch(`${SERVER_URL}/user/settings`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${newToken}`
-                                },
-                                body: JSON.stringify(settings)
-                            });
-                            
-                            if (!retryResponse.ok) {
-                                throw new Error('Failed to save settings after token refresh');
-                            }
-                        }
-                    } else {
-                        throw new Error('Session expired. Please login again.');
-                    }
-                });
-                return;
-            }
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to save settings');
-        }
 
         // Apply theme immediately after successful save
         applyTheme(settings.theme);
         
         // Show success message
-        const settingsMessage = document.getElementById('settingsMessage');
         settingsMessage.textContent = 'Settings saved successfully';
         settingsMessage.style.color = 'var(--success-color, #4CAF50)';
-        setTimeout(() => {
-            settingsMessage.textContent = '';
-        }, 3000);
-
+        
         // Notify background script of theme change
         chrome.runtime.sendMessage({ 
             type: 'THEME_CHANGE', 
@@ -280,6 +290,15 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
         const settingsMessage = document.getElementById('settingsMessage');
         settingsMessage.textContent = error.message || 'Failed to save settings';
         settingsMessage.style.color = 'var(--error-color, #f44336)';
+    } finally {
+        const saveButton = document.getElementById('saveSettings');
+        saveButton.disabled = false;
+        saveButton.textContent = 'Save Settings';
+        
+        // Clear message after 3 seconds
+        setTimeout(() => {
+            document.getElementById('settingsMessage').textContent = '';
+        }, 3000);
     }
 });
 
@@ -326,14 +345,26 @@ async function checkAuth() {
 document.getElementById('loginButton').addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
+    const loginError = document.getElementById('loginError');
+    loginError.textContent = '';
+
+    if (!email || !password) {
+        loginError.textContent = 'Please enter both email and password';
+        return;
+    }
 
     try {
+        document.getElementById('loginButton').disabled = true;
+        document.getElementById('loginButton').textContent = 'Logging in...';
+        
         const response = await fetch(`${SERVER_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password }),
+            mode: 'cors',
+            credentials: 'same-origin'
         });
 
         if (!response.ok) {
@@ -347,16 +378,43 @@ document.getElementById('loginButton').addEventListener('click', async () => {
             user: { email }
         });
 
+        // Also notify the background script
+        chrome.runtime.sendMessage({ 
+            type: 'SESSION_UPDATE', 
+            jwtToken: data.token,
+            session: { email }
+        });
+
         checkAuth();
     } catch (error) {
-        document.getElementById('loginError').textContent = error.message;
+        loginError.textContent = error.message || 'Login failed. Please try again.';
+    } finally {
+        document.getElementById('loginButton').disabled = false;
+        document.getElementById('loginButton').textContent = 'Login';
     }
 });
 
 // Logout
 document.getElementById('logoutButton').addEventListener('click', async () => {
-    await chrome.storage.local.remove(['token', 'user']);
-    checkAuth();
+    try {
+        const logoutButton = document.getElementById('logoutButton');
+        logoutButton.disabled = true;
+        logoutButton.textContent = 'Logging out...';
+        
+        // Clear storage
+        await chrome.storage.local.remove(['token', 'user']);
+        
+        // Notify background script
+        chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
+        
+        checkAuth();
+    } catch (error) {
+        console.error('Error during logout:', error);
+    } finally {
+        const logoutButton = document.getElementById('logoutButton');
+        logoutButton.disabled = false;
+        logoutButton.textContent = 'Logout';
+    }
 });
 
 // Setup event listener for signup link

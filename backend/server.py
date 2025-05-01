@@ -25,15 +25,7 @@ app = Flask(__name__)
 # Configure CORS with more specific settings
 CORS(app, resources={
     r"/*": {
-        "origins": [
-            "https://lightread.xyz",           # Production frontend
-            "https://www.lightread.xyz",       # Production frontend with www
-            "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app", # Vercel preview deployment
-            "https://*.vercel.app",            # Any Vercel deployment
-            "http://localhost:5173",           # Local development for Vite
-            "http://localhost:3000",           # Alternative local development port
-            "chrome-extension://*"             # Chrome extension
-        ],
+        "origins": "*",  # Allow all origins - we'll rely on JWT for security
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True,
@@ -300,21 +292,9 @@ def get_authenticated_supabase(token):
     return client
 
 @app.route('/summarize', methods=['POST'])
-def summarize_text():
+@token_required
+def summarize_text(current_user):
     try:
-        # Get the JWT token from the Authorization header
-        token = request.headers.get('Authorization')
-        if not token or not token.startswith('Bearer '):
-            return jsonify({'error': 'No valid token provided'}), 401
-        
-        # Create authenticated Supabase client
-        auth_supabase = get_authenticated_supabase(token.split(' ')[1])
-        
-        # Extract user_id from token
-        user_id = get_user_id_from_token(token.split(' ')[1])
-        if not user_id:
-            return jsonify({'error': 'Invalid token'}), 401
-
         # Get the text to summarize from request
         data = request.get_json()
         if not data or 'text' not in data:
@@ -324,7 +304,7 @@ def summarize_text():
         char_count = len(text)
         
         # Get user limits and check them
-        user_limits = get_user_limits(user_id)
+        user_limits = get_user_limits(current_user)
         if char_count > user_limits['max_text_length']:
             return jsonify({
                 'error': f"Text exceeds maximum length of {user_limits['max_text_length']} characters",
@@ -334,7 +314,7 @@ def summarize_text():
             
         # Get today's usage
         today = datetime.now().date().isoformat()
-        result = auth_supabase.from_('daily_usage').select('*').eq('user_id', user_id).eq('date', today).execute()
+        result = supabase.from_('daily_usage').select('*').eq('user_id', current_user).eq('date', today).execute()
         
         current_usage = result.data[0] if result.data else {'summaries_count': 0}
         summaries_count = current_usage.get('summaries_count', 0)
@@ -347,7 +327,7 @@ def summarize_text():
             }), 429
 
         # Get user settings for summary preferences
-        settings_result = auth_supabase.from_('user_settings').select('*').eq('user_id', user_id).execute()
+        settings_result = supabase.from_('user_settings').select('*').eq('user_id', current_user).execute()
         settings = settings_result.data[0] if settings_result.data else {
             'preferred_summary_length': '2-3 sentences (medium)',
             'summary_tone': 'neutral',
@@ -355,7 +335,6 @@ def summarize_text():
         }
 
         # Get user's plan type
-        user_limits = get_user_limits(user_id)
         is_pro = user_limits['plan_type'] in ['pro', 'enterprise']
 
         # Check for override parameters (only for pro users)
@@ -419,14 +398,14 @@ Text to summarize:
         
         # Update daily usage
         new_usage = {
-            'user_id': user_id,
+            'user_id': current_user,
             'date': today,
             'summaries_count': summaries_count + 1,
             'total_characters': (current_usage.get('total_characters', 0) or 0) + char_count
         }
         
         # Use upsert with conflict target
-        auth_supabase.from_('daily_usage').upsert(
+        supabase.from_('daily_usage').upsert(
             new_usage,
             on_conflict='user_id,date'
         ).execute()
@@ -450,23 +429,9 @@ Text to summarize:
         return jsonify({'error': 'Failed to generate summary'}), 500
 
 @app.route('/summaries/save', methods=['POST'])
-def save_summary():
+@token_required
+def save_summary(current_user):
     try:
-        # Get the JWT token from the Authorization header
-        token = request.headers.get('Authorization')
-        if not token or not token.startswith('Bearer '):
-            print("No valid token provided in request headers")
-            return jsonify({'error': 'No valid token provided'}), 401
-        
-        # Create authenticated Supabase client
-        auth_supabase = get_authenticated_supabase(token.split(' ')[1])
-        
-        # Extract user_id from token
-        user_id = get_user_id_from_token(token.split(' ')[1])
-        if not user_id:
-            print("Invalid token or failed to extract user_id")
-            return jsonify({'error': 'Invalid token'}), 401
-
         data = request.get_json()
         if not data:
             print("No data provided in request body")
@@ -487,9 +452,9 @@ def save_summary():
             return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
 
         # Save summary to database
-        print(f"Attempting to save summary for user {user_id}")
-        result = auth_supabase.from_('summaries').insert({
-            'user_id': user_id,
+        print(f"Attempting to save summary for user {current_user}")
+        result = supabase.from_('summaries').insert({
+            'user_id': current_user,
             'summary': summary,
             'source_url': source_url,
             'character_count': character_count
@@ -524,32 +489,20 @@ def get_summaries(current_user):
         return jsonify({"error": f"Failed to fetch summaries: {e}"}), 500
 
 @app.route('/user/settings', methods=['GET'])
-def get_user_settings():
+@token_required
+def get_user_settings(current_user):
     try:
-        # Get the JWT token from the Authorization header
-        token = request.headers.get('Authorization')
-        if not token or not token.startswith('Bearer '):
-            return jsonify({'error': 'No valid token provided'}), 401
-        
-        # Create authenticated Supabase client
-        auth_supabase = get_authenticated_supabase(token.split(' ')[1])
-        
-        # Extract user_id from token
-        user_id = get_user_id_from_token(token.split(' ')[1])
-        if not user_id:
-            return jsonify({'error': 'Invalid token'}), 401
-
         # Try to get user's settings
-        result = auth_supabase.from_('user_settings').select('*').eq('user_id', user_id).execute()
+        result = supabase.from_('user_settings').select('*').eq('user_id', current_user).execute()
         
         # If no settings exist, create default settings
         if not result.data:
             default_settings = {
-                'user_id': user_id,
+                'user_id': current_user,
                 'preferred_summary_length': 'medium',
                 'theme': 'system'
             }
-            result = auth_supabase.from_('user_settings').insert(default_settings).execute()
+            result = supabase.from_('user_settings').insert(default_settings).execute()
         
         return jsonify(result.data[0]), 200
     except Exception as e:
@@ -562,11 +515,8 @@ def update_user_settings(current_user):
     try:
         data = request.get_json()
         
-        # Get the authenticated Supabase client for enum validation
-        auth_supabase = get_authenticated_supabase(request.headers.get('Authorization').split(' ')[1])
-        
         # Get valid enum values
-        enum_values = auth_supabase.rpc('get_enum_values').execute()
+        enum_values = supabase.rpc('get_enum_values').execute()
         if not enum_values.data:
             raise Exception("Failed to get enum values for validation")
             
@@ -609,11 +559,8 @@ def update_user_settings(current_user):
 @token_required
 def get_enum_values(current_user):
     try:
-        # Get the authenticated Supabase client
-        auth_supabase = get_authenticated_supabase(request.headers.get('Authorization').split(' ')[1])
-        
         # Get enum values from the database
-        result = auth_supabase.rpc('get_enum_values').execute()
+        result = supabase.rpc('get_enum_values').execute()
         
         if not result.data:
             raise Exception("Failed to get enum values")
@@ -627,7 +574,6 @@ def get_enum_values(current_user):
 def home():
     return "LightRead Summarization Server is running!"
 
-# Add specific CORS configuration for the webhook endpoint
 @app.after_request
 def after_request(response):
     # Get the origin from the request
@@ -639,33 +585,12 @@ def after_request(response):
         # because Stripe doesn't care about them, it just needs a 200 response
         pass
     elif origin:
-        # For requests with an Origin header, check if it's allowed
-        allowed_origins = [
-            "https://lightread.xyz",
-            "https://www.lightread.xyz",
-            "https://lightread-7gculevfz-jordansinclair-duedus-projects.vercel.app",
-            "http://localhost:5173",
-            "http://localhost:3000"
-        ]
-        
-        # Check for Vercel deployments
-        if ".vercel.app" in origin:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        # Check for specific allowed origins
-        elif origin in allowed_origins:
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        # For chrome extensions
-        elif origin.startswith("chrome-extension://"):
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        # For all other origins, allow the request with proper CORS headers
+        # We rely on JWT token validation for security instead of origin checking
+        response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     
     return response
 

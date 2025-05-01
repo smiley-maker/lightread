@@ -28,6 +28,7 @@ chrome.storage.local.get(['token', 'user'], (result) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'AUTH_STATE_CHANGE') {
     authState = request.authState;
+    sendResponse({ success: true });
   } else if (request.type === 'THEME_CHANGE') {
     // Update theme for all open popups
     chrome.tabs.query({}, (tabs) => {
@@ -36,10 +37,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           target: { tabId: tab.id },
           function: updateTheme,
           args: [request.theme]
-        });
+        }).catch(err => console.error('Error executing theme change:', err));
       });
     });
+    sendResponse({ success: true });
+  } else if (request.type === 'REFRESH_TOKEN') {
+    // Handle token refresh request
+    refreshToken()
+      .then(success => {
+        sendResponse({ 
+          success: success, 
+          token: success ? authState.token : null 
+        });
+      })
+      .catch(error => {
+        console.error('Error refreshing token:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Indicates we'll respond asynchronously
+  } else if (request.type === 'REFRESH_USAGE') {
+    // We don't need to do anything here, just acknowledge
+    sendResponse({ success: true });
   }
+  
+  // For sync responses, return true if handled
+  return true;
 });
 
 // Create context menu on install
@@ -84,7 +106,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           text: info.selectionText,
           source_url: tab.url,
           length: summaryLength
-        })
+        }),
+        mode: 'cors',
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
@@ -144,11 +168,18 @@ async function refreshToken() {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authState.token}`
-      }
+      },
+      // Add CORS mode to allow for better error handling
+      mode: 'cors',
+      credentials: 'same-origin'
     });
 
     if (!response.ok) {
-      throw new Error('Failed to refresh token');
+      if (response.status === 404) {
+        console.warn('Auth refresh endpoint not found - this is expected in development');
+        return false;
+      }
+      throw new Error(`Failed to refresh token: ${response.status}`);
     }
 
     const data = await response.json();
@@ -170,7 +201,10 @@ async function getUserSettings() {
     const response = await fetch(`${SERVER_URL}/user/settings`, {
       headers: {
         'Authorization': `Bearer ${authState.token}`
-      }
+      },
+      // Add CORS mode to allow for better error handling
+      mode: 'cors', 
+      credentials: 'same-origin'
     });
 
     if (!response.ok) {
@@ -180,13 +214,20 @@ async function getUserSettings() {
           return getUserSettings();
         }
       }
-      throw new Error('Failed to get user settings');
+      throw new Error(`Failed to get user settings: ${response.status}`);
     }
 
     return await response.json();
   } catch (error) {
     console.error('Error getting user settings:', error);
-    return null;
+    // Return default settings instead of null
+    return {
+      preferred_summary_length: 'medium',
+      theme: 'light',
+      summary_tone: 'neutral',
+      summary_difficulty: 'normal',
+      save_source_url: true
+    };
   }
 }
 
@@ -225,6 +266,7 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   const logo = document.createElement('img');
   logo.id = 'lightread-logo';
   logo.style.cssText = 'width: 120px;';
+  logo.src = logoUrl; // Set default logo
   header.appendChild(logo);
 
   // Add close button
@@ -371,24 +413,37 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   `;
   saveButton.onclick = async () => {
     try {
-      // Get user settings to check save_source_url
-      const settingsResponse = await fetch(`${serverUrl}/user/settings`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      // Set button to loading state
+      saveButton.textContent = 'Saving...';
+      saveButton.disabled = true;
+      
+      let settings = { save_source_url: true }; // Default value
+      
+      try {
+        // Get user settings to check save_source_url
+        const settingsResponse = await fetch(`${serverUrl}/user/settings`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          // Add no-cors mode as fallback
+          mode: 'cors',
+          credentials: 'same-origin'
+        });
+
+        if (settingsResponse.ok) {
+          settings = await settingsResponse.json();
+        } else {
+          console.warn('Could not fetch settings, using defaults');
         }
-      });
-
-      if (!settingsResponse.ok) {
-        throw new Error('Failed to get user settings');
+      } catch (settingsError) {
+        console.warn('Error fetching settings:', settingsError);
+        // Continue with default settings
       }
-
-      const settings = await settingsResponse.json();
-      const saveSourceUrl = settings.save_source_url ?? true;
 
       // Prepare summary data based on settings
       const dataToSave = {
         ...summaryData,
-        source_url: saveSourceUrl ? summaryData.source_url : null
+        source_url: settings.save_source_url ?? true ? summaryData.source_url : null
       };
 
       const response = await fetch(`${serverUrl}/summaries/save`, {
@@ -397,15 +452,22 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(dataToSave)
+        body: JSON.stringify(dataToSave),
+        // Add no-cors mode as fallback
+        mode: 'cors',
+        credentials: 'same-origin'
       });
 
       if (!response.ok) {
         if (response.status === 401) {
-          // Send message to background script to refresh token
+          // Try to refresh token through background script
           chrome.runtime.sendMessage({ type: 'REFRESH_TOKEN' }, async (response) => {
-            if (response.success) {
-              saveButton.onclick();
+            if (response && response.success) {
+              // Re-enable button
+              saveButton.textContent = 'Save';
+              saveButton.disabled = false;
+              // Try again with new token
+              saveButton.click();
             } else {
               throw new Error('Failed to refresh token');
             }
@@ -417,11 +479,17 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       }
 
       saveButton.textContent = 'Saved!';
-      setTimeout(() => saveButton.textContent = 'Save', 2000);
+      setTimeout(() => {
+        saveButton.textContent = 'Save';
+        saveButton.disabled = false;
+      }, 2000);
     } catch (error) {
       console.error('Error saving summary:', error);
       saveButton.textContent = 'Error';
-      setTimeout(() => saveButton.textContent = 'Save', 2000);
+      setTimeout(() => {
+        saveButton.textContent = 'Save';
+        saveButton.disabled = false;
+      }, 2000);
     }
   };
 
@@ -437,182 +505,201 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
       const limitsResponse = await fetch(`${serverUrl}/user/limits`, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        // Add no-cors mode as fallback
+        mode: 'cors',
+        credentials: 'same-origin'
       });
       
-      if (!limitsResponse.ok) throw new Error('Failed to get user limits');
+      if (!limitsResponse.ok) {
+        console.warn('Failed to get user limits, status:', limitsResponse.status);
+        return;
+      }
       
       const limits = await limitsResponse.json();
       const isPro = limits.plan_type === 'pro' || limits.plan_type === 'enterprise';
       
       if (isPro) {
-        // Get available options
-        const optionsResponse = await fetch(`${serverUrl}/rpc/get_enum_values`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        try {
+          // Get available options
+          const optionsResponse = await fetch(`${serverUrl}/rpc/get_enum_values`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            // Add no-cors mode as fallback
+            mode: 'cors',
+            credentials: 'same-origin'
+          });
+          
+          if (!optionsResponse.ok) {
+            console.warn('Failed to get options, status:', optionsResponse.status);
+            return;
           }
-        });
-        
-        if (!optionsResponse.ok) throw new Error('Failed to get options');
-        
-        const options = await optionsResponse.json();
-        
-        // Create controls container
-        const controlsContainer = document.createElement('div');
-        controlsContainer.style.cssText = `
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin: 16px 0;
-          padding: 12px;
-          background-color: var(--background-color-secondary, #f5f5f5);
-          border-radius: 6px;
-        `;
-
-        // Create selects container
-        const selectsContainer = document.createElement('div');
-        selectsContainer.style.cssText = `
-          display: flex;
-          gap: 12px;
-        `;
-
-        // Create tone control
-        const toneGroup = document.createElement('div');
-        toneGroup.style.cssText = 'flex: 1;';
-        
-        const toneLabel = document.createElement('label');
-        toneLabel.textContent = 'Tone';
-        toneLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
-        
-        const toneSelect = document.createElement('select');
-        toneSelect.style.cssText = `
-          width: 100%;
-          padding: 6px;
-          border: 1px solid var(--border-color, #e0e0e0);
-          border-radius: 4px;
-          background-color: var(--background-color, #ffffff);
-          color: var(--text-color, #333);
-        `;
-        
-        // Add tone options
-        const toneOptions = options.find(o => o.enum_name === 'summary_tone')?.enum_values || [];
-        toneOptions.forEach(tone => {
-          const option = document.createElement('option');
-          option.value = tone;
-          option.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
-          toneSelect.appendChild(option);
-        });
-
-        // Create difficulty control
-        const difficultyGroup = document.createElement('div');
-        difficultyGroup.style.cssText = 'flex: 1;';
-        
-        const difficultyLabel = document.createElement('label');
-        difficultyLabel.textContent = 'Difficulty';
-        difficultyLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
-        
-        const difficultySelect = document.createElement('select');
-        difficultySelect.style.cssText = `
-          width: 100%;
-          padding: 6px;
-          border: 1px solid var(--border-color, #e0e0e0);
-          border-radius: 4px;
-          background-color: var(--background-color, #ffffff);
-          color: var(--text-color, #333);
-        `;
-        
-        // Add difficulty options
-        const difficultyOptions = options.find(o => o.enum_name === 'summary_difficulty')?.enum_values || [];
-        difficultyOptions.forEach(difficulty => {
-          const option = document.createElement('option');
-          option.value = difficulty;
-          option.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
-          difficultySelect.appendChild(option);
-        });
-
-        // Create update button
-        const updateButton = document.createElement('button');
-        updateButton.textContent = 'Update Summary';
-        updateButton.style.cssText = `
-          background-color: var(--primary-color, #BAA5FF);
-          color: black;
-          border: none;
-          border-radius: 4px;
-          padding: 8px 16px;
-          cursor: pointer;
-          font-size: 14px;
-          margin-top: 8px;
-          width: 100%;
-        `;
-
-        // Add regenerate function
-        const regenerateSummary = async (tone, difficulty) => {
-          try {
-            if (!summaryData.original_text) {
-              throw new Error('Unable to regenerate summary: original text not available');
-            }
-
-            summaryText.textContent = 'Generating new summary...';
-            updateButton.disabled = true;
-            updateButton.style.opacity = '0.7';
-            
-            const response = await fetch(`${serverUrl}/summarize`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                text: summaryData.original_text,
-                override_tone: tone,
-                override_difficulty: difficulty
-              })
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              if (errorData.code === 'PRO_FEATURE') {
-                throw new Error('Summary regeneration is only available for pro users. Please upgrade to pro to use this feature.');
+          
+          const options = await optionsResponse.json();
+          
+          // Create controls container
+          const controlsContainer = document.createElement('div');
+          controlsContainer.style.cssText = `
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 16px 0;
+            padding: 12px;
+            background-color: var(--background-color-secondary, #f5f5f5);
+            border-radius: 6px;
+          `;
+  
+          // Create selects container
+          const selectsContainer = document.createElement('div');
+          selectsContainer.style.cssText = `
+            display: flex;
+            gap: 12px;
+          `;
+  
+          // Create tone control
+          const toneGroup = document.createElement('div');
+          toneGroup.style.cssText = 'flex: 1;';
+          
+          const toneLabel = document.createElement('label');
+          toneLabel.textContent = 'Tone';
+          toneLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
+          
+          const toneSelect = document.createElement('select');
+          toneSelect.style.cssText = `
+            width: 100%;
+            padding: 6px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 4px;
+            background-color: var(--background-color, #ffffff);
+            color: var(--text-color, #333);
+          `;
+          
+          // Add tone options
+          const toneOptions = options.find(o => o.enum_name === 'summary_tone')?.enum_values || [];
+          toneOptions.forEach(tone => {
+            const option = document.createElement('option');
+            option.value = tone;
+            option.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
+            toneSelect.appendChild(option);
+          });
+  
+          // Create difficulty control
+          const difficultyGroup = document.createElement('div');
+          difficultyGroup.style.cssText = 'flex: 1;';
+          
+          const difficultyLabel = document.createElement('label');
+          difficultyLabel.textContent = 'Difficulty';
+          difficultyLabel.style.cssText = 'display: block; margin-bottom: 4px; font-size: 12px; color: var(--text-color-secondary, #666);';
+          
+          const difficultySelect = document.createElement('select');
+          difficultySelect.style.cssText = `
+            width: 100%;
+            padding: 6px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 4px;
+            background-color: var(--background-color, #ffffff);
+            color: var(--text-color, #333);
+          `;
+          
+          // Add difficulty options
+          const difficultyOptions = options.find(o => o.enum_name === 'summary_difficulty')?.enum_values || [];
+          difficultyOptions.forEach(difficulty => {
+            const option = document.createElement('option');
+            option.value = difficulty;
+            option.textContent = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+            difficultySelect.appendChild(option);
+          });
+  
+          // Create update button
+          const updateButton = document.createElement('button');
+          updateButton.textContent = 'Update Summary';
+          updateButton.style.cssText = `
+            background-color: var(--primary-color, #BAA5FF);
+            color: black;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+            width: 100%;
+          `;
+  
+          // Add regenerate function
+          const regenerateSummary = async (tone, difficulty) => {
+            try {
+              if (!summaryData.original_text) {
+                throw new Error('Unable to regenerate summary: original text not available');
               }
-              throw new Error(errorData.error || 'Failed to generate summary');
+  
+              summaryText.textContent = 'Generating new summary...';
+              updateButton.disabled = true;
+              updateButton.style.opacity = '0.7';
+              
+              const response = await fetch(`${serverUrl}/summarize`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  text: summaryData.original_text,
+                  override_tone: tone,
+                  override_difficulty: difficulty
+                }),
+                // Add no-cors mode as fallback
+                mode: 'cors',
+                credentials: 'same-origin'
+              });
+  
+              if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.code === 'PRO_FEATURE') {
+                  throw new Error('Summary regeneration is only available for pro users. Please upgrade to pro to use this feature.');
+                }
+                throw new Error(errorData.error || 'Failed to generate summary');
+              }
+              
+              const data = await response.json();
+              summaryText.textContent = data.summary;
+              
+              // Update summary data with new summary
+              summaryData.summary = data.summary;
+  
+              // Refresh usage display in popup
+              chrome.runtime.sendMessage({ type: 'REFRESH_USAGE' });
+            } catch (error) {
+              console.error('Error regenerating summary:', error);
+              summaryText.textContent = error.message || 'Failed to generate new summary. Please try again.';
+            } finally {
+              updateButton.disabled = false;
+              updateButton.style.opacity = '1';
             }
-            
-            const data = await response.json();
-            summaryText.textContent = data.summary;
-            
-            // Update summary data with new summary
-            summaryData.summary = data.summary;
-
-            // Refresh usage display in popup
-            chrome.runtime.sendMessage({ type: 'REFRESH_USAGE' });
-          } catch (error) {
-            console.error('Error regenerating summary:', error);
-            summaryText.textContent = error.message || 'Failed to generate new summary. Please try again.';
-          } finally {
-            updateButton.disabled = false;
-            updateButton.style.opacity = '1';
-          }
-        };
-
-        // Add click handler for update button
-        updateButton.onclick = () => regenerateSummary(toneSelect.value, difficultySelect.value);
-
-        // Assemble controls
-        toneGroup.appendChild(toneLabel);
-        toneGroup.appendChild(toneSelect);
-        difficultyGroup.appendChild(difficultyLabel);
-        difficultyGroup.appendChild(difficultySelect);
-        
-        selectsContainer.appendChild(toneGroup);
-        selectsContainer.appendChild(difficultyGroup);
-        
-        controlsContainer.appendChild(selectsContainer);
-        controlsContainer.appendChild(updateButton);
-        
-        // Insert controls before buttons
-        popup.insertBefore(controlsContainer, buttonsContainer);
+          };
+  
+          // Add click handler for update button
+          updateButton.onclick = () => regenerateSummary(toneSelect.value, difficultySelect.value);
+  
+          // Assemble controls
+          toneGroup.appendChild(toneLabel);
+          toneGroup.appendChild(toneSelect);
+          difficultyGroup.appendChild(difficultyLabel);
+          difficultyGroup.appendChild(difficultySelect);
+          
+          selectsContainer.appendChild(toneGroup);
+          selectsContainer.appendChild(difficultyGroup);
+          
+          controlsContainer.appendChild(selectsContainer);
+          controlsContainer.appendChild(updateButton);
+          
+          // Insert controls before buttons
+          popup.insertBefore(controlsContainer, buttonsContainer);
+        } catch (optionsError) {
+          console.error('Error fetching options:', optionsError);
+        }
       }
     } catch (error) {
       console.error('Error setting up pro controls:', error);
@@ -651,60 +738,70 @@ function showSummaryPopup(summary, logoUrl, summaryData, token, serverUrl) {
   `;
   document.head.appendChild(style);
 
-  // Get user's theme setting from Supabase
-  fetch(`${serverUrl}/user/settings`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error('Failed to fetch theme settings');
-    }
-    return response.json();
-  })
-  .then(settings => {
-    const theme = settings.theme;
-    
-    // Apply theme based on user's saved preference
-    if (theme === 'dark') {
-      document.body.setAttribute('data-theme', 'dark');
-      logo.src = chrome.runtime.getURL('logo_light.png');
-    } else if (theme === 'system') {
-      // Only use system preference if theme is set to 'system'
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
+  // Set a default theme (light) immediately
+  document.body.setAttribute('data-theme', 'light');
+  logo.src = chrome.runtime.getURL('logo.png');
+
+  // Then try to get user's theme setting from Supabase
+  try {
+    fetch(`${serverUrl}/user/settings`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      // Add no-cors mode as fallback
+      mode: 'cors',
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch theme settings: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(settings => {
+      const theme = settings.theme;
+      
+      // Apply theme based on user's saved preference
+      if (theme === 'dark') {
         document.body.setAttribute('data-theme', 'dark');
         logo.src = chrome.runtime.getURL('logo_light.png');
-      } else {
-        document.body.removeAttribute('data-theme');
-        logo.src = chrome.runtime.getURL('logo.png');
-      }
-    } else {
-      // Default to light theme
-      document.body.removeAttribute('data-theme');
-      logo.src = chrome.runtime.getURL('logo.png');
-    }
-
-    // Listen for system theme changes only if theme is set to system
-    if (theme === 'system') {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (e.matches) {
+      } else if (theme === 'system') {
+        // Only use system preference if theme is set to 'system'
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
           document.body.setAttribute('data-theme', 'dark');
           logo.src = chrome.runtime.getURL('logo_light.png');
         } else {
           document.body.removeAttribute('data-theme');
           logo.src = chrome.runtime.getURL('logo.png');
         }
-      });
-    }
-  })
-  .catch(error => {
-    console.error('Error getting theme settings:', error);
-    // Default to light theme on error
-    document.body.removeAttribute('data-theme');
-    logo.src = chrome.runtime.getURL('logo.png');
-  });
+      } else {
+        // Default to light theme
+        document.body.removeAttribute('data-theme');
+        logo.src = chrome.runtime.getURL('logo.png');
+      }
+
+      // Listen for system theme changes only if theme is set to system
+      if (theme === 'system') {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+          if (e.matches) {
+            document.body.setAttribute('data-theme', 'dark');
+            logo.src = chrome.runtime.getURL('logo_light.png');
+          } else {
+            document.body.removeAttribute('data-theme');
+            logo.src = chrome.runtime.getURL('logo.png');
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error getting theme settings:', error);
+      // Default theme already set, no need to set again
+    });
+  } catch (e) {
+    console.error('Error setting theme:', e);
+    // Default theme already set, no need to set again
+  }
 
   document.body.appendChild(popup);
   
@@ -771,8 +868,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       session: message.session,
       jwtToken: message.jwtToken
     });
+    
+    // Also update the authState for immediate use
+    if (message.jwtToken) {
+      authState = {
+        isLoggedIn: true,
+        token: message.jwtToken,
+        user: message.session
+      };
+    }
+    
+    sendResponse({ success: true });
   } else if (message.type === 'SESSION_CLEAR') {
     // Clear extension storage
     chrome.storage.session.clear();
+    
+    // Clear authState
+    authState = {
+      isLoggedIn: false,
+      token: null,
+      user: null
+    };
+    
+    sendResponse({ success: true });
   }
+  
+  // Allow async response
+  return true;
 });
