@@ -412,6 +412,7 @@ def handle_checkout_session_completed(session):
                     
             if not user_id:
                 print(f"User not found in auth.users with email: {user_email}")
+                return
         except Exception as auth_err:
             print(f"Error using auth API: {auth_err}")
             import traceback
@@ -421,17 +422,24 @@ def handle_checkout_session_completed(session):
         # Update or create subscription in database
         print(f"\nUpdating subscription in database for user ID: {user_id}")
         
+        # Current timestamp for created_at/updated_at
+        now = datetime.utcnow().isoformat()
+        
         subscription_data = {
             'user_id': user_id,
             'stripe_customer_id': customer.id,
             'plan_type': 'pro',
             'status': 'active',
-            'updated_at': datetime.utcnow().isoformat()
+            'updated_at': now
         }
         
         if subscription:
             subscription_data['stripe_subscription_id'] = subscription.id
-            subscription_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+            
+            # Use end_date for the column name, not current_period_end
+            if hasattr(subscription, 'current_period_end'):
+                subscription_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
+                print(f"Setting end_date to: {subscription_data['end_date']}")
             
         print(f"Subscription data to update: {subscription_data}")
         
@@ -446,7 +454,8 @@ def handle_checkout_session_completed(session):
                 print(f"Update response: {update_response}")
             else:
                 print("Creating new subscription...")
-                subscription_data['created_at'] = datetime.utcnow().isoformat()
+                subscription_data['created_at'] = now
+                subscription_data['start_date'] = now  # Add start_date for new subscriptions
                 create_response = supabase.table('subscriptions').insert(subscription_data).execute()
                 print(f"Create response: {create_response}")
                 
