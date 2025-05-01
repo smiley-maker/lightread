@@ -242,14 +242,17 @@ def handle_checkout_session_completed(session):
         if hasattr(session, 'subscription') and session.subscription:
             subscription_id = session.subscription
             subscription = stripe.Subscription.retrieve(subscription_id)
+            print(f"Retrieved subscription: {subscription}")
             # Check if items is callable (it's a method) or an attribute with data
             if hasattr(subscription, 'items'):
                 if callable(subscription.items):
                     # If items is a method, call it to get the data
                     items_data = subscription.items()
+                    print(f"Subscription items (method): {items_data}")
                     plan_id = items_data.data[0].plan.id if items_data.data else None
                 else:
                     # If items is an attribute with data property
+                    print(f"Subscription items (attribute): {subscription.items}")
                     plan_id = subscription.items.data[0].plan.id if hasattr(subscription.items, 'data') and subscription.items.data else None
             else:
                 plan_id = None
@@ -258,6 +261,7 @@ def handle_checkout_session_completed(session):
         # Option 2: If subscription ID isn't directly available, we can try other approaches
         if not subscription_id and hasattr(session, 'line_items'):
             line_items = stripe.checkout.Session.list_line_items(session.id)
+            print(f"Line items from session: {line_items}")
             if line_items and line_items.data:
                 plan_id = line_items.data[0].price.id
                 print(f"Got plan from line items: {plan_id}")
@@ -278,6 +282,7 @@ def handle_checkout_session_completed(session):
             # Try using the auth system
             try:
                 auth_response = supabase.auth.admin.list_users()
+                print(f"Auth response: {auth_response}")
                 if hasattr(auth_response, 'users'):
                     matching_users = [u for u in auth_response.users if u.email == user_email]
                     if matching_users:
@@ -333,7 +338,7 @@ def handle_checkout_session_completed(session):
                 
                 update_data['billing_period'] = billing_period
             
-            print(f"Updating existing subscription for user {user_id}")
+            print(f"Updating existing subscription for user {user_id} with data: {update_data}")
             try:
                 update_response = supabase.table('subscriptions').update(update_data).eq('user_id', user_id).execute()
                 print(f"Subscription updated response: {update_response}")
@@ -376,7 +381,7 @@ def handle_checkout_session_completed(session):
                 
                 create_data['billing_period'] = billing_period
             
-            print(f"Creating new subscription for user {user_id}")
+            print(f"Creating new subscription for user {user_id} with data: {create_data}")
             try:
                 create_response = supabase.table('subscriptions').insert(create_data).execute()
                 print(f"Subscription creation response: {create_response}")

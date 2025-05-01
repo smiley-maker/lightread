@@ -153,6 +153,17 @@ export const verifyCheckoutSession = async (sessionId) => {
     const responseData = await response.json();
     console.log('Session verification result:', responseData);
     
+    // Add additional logging for debugging
+    if (responseData.success) {
+      console.log('Session verification successful');
+      console.log('Customer email:', responseData.customer_email);
+      console.log('Subscription ID:', responseData.subscription_id);
+    } else {
+      console.log('Session verification failed');
+      console.log('Status:', responseData.status);
+      console.log('Message:', responseData.message);
+    }
+    
     return responseData;
   } catch (error) {
     console.error('Error verifying checkout session:', error);
