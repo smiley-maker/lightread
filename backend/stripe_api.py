@@ -97,6 +97,7 @@ def webhook():
     print(f"Request data: {payload.decode('utf-8')}")
     print(f"Signature header: {sig_header}")
     print(f"Content-Type: {request.headers.get('Content-Type')}")
+    print(f"X-Forwarded-For: {request.headers.get('X-Forwarded-For')}")
     print(f"User-Agent: {request.headers.get('User-Agent')}")
     print("==================== END REQUEST INFO ====================")
     
@@ -119,51 +120,61 @@ def webhook():
         print(f"Event data: {event.data.object}")
         
         # Handle different event types
-        if event.type == 'checkout.session.completed':
-            session = event.data.object
-            print(f"Processing checkout.session.completed for session: {session.id}")
-            print(f"Session status: {session.status}")
-            print(f"Payment status: {session.payment_status}")
-            print(f"Customer email: {session.customer_email}")
-            print(f"Subscription ID: {session.subscription}")
-            # Process the checkout session
-            handle_checkout_session_completed(session)
-        elif event.type == 'customer.subscription.updated':
-            subscription = event.data.object
-            print(f"Processing customer.subscription.updated for subscription: {subscription.id}")
-            print(f"Subscription status: {subscription.status}")
-            print(f"Customer ID: {subscription.customer}")
-            # Update subscription status
-            handle_subscription_updated(subscription)
-        elif event.type == 'customer.subscription.deleted':
-            subscription = event.data.object
-            print(f"Processing customer.subscription.deleted for subscription: {subscription.id}")
-            # Mark subscription as cancelled
-            handle_subscription_deleted(subscription)
-        elif event.type == 'invoice.paid':
-            # Handle the invoice paid event
-            invoice = event.data.object
-            print(f"Processing invoice.paid event for invoice: {invoice.id}")
-            print(f"Invoice status: {invoice.status}")
-            print(f"Subscription ID: {invoice.subscription}")
-            
-            # Get the subscription ID from the invoice
-            if hasattr(invoice, 'subscription') and invoice.subscription:
-                subscription_id = invoice.subscription
-                # Retrieve the subscription
-                try:
-                    subscription = stripe.Subscription.retrieve(subscription_id)
-                    print(f"Retrieved subscription: {subscription.id} for invoice: {invoice.id}")
-                    # Update the subscription in our database
-                    handle_subscription_updated(subscription)
-                except Exception as sub_err:
-                    print(f"Error retrieving subscription for invoice: {str(sub_err)}")
+        try:
+            if event.type == 'checkout.session.completed':
+                session = event.data.object
+                print(f"Processing checkout.session.completed for session: {session.id}")
+                print(f"Session status: {session.status}")
+                print(f"Payment status: {session.payment_status}")
+                print(f"Customer email: {session.customer_email}")
+                print(f"Subscription ID: {session.subscription}")
+                # Process the checkout session
+                handle_checkout_session_completed(session)
+            elif event.type == 'customer.subscription.updated':
+                subscription = event.data.object
+                print(f"Processing customer.subscription.updated for subscription: {subscription.id}")
+                print(f"Subscription status: {subscription.status}")
+                print(f"Customer ID: {subscription.customer}")
+                # Update subscription status
+                handle_subscription_updated(subscription)
+            elif event.type == 'customer.subscription.deleted':
+                subscription = event.data.object
+                print(f"Processing customer.subscription.deleted for subscription: {subscription.id}")
+                # Mark subscription as cancelled
+                handle_subscription_deleted(subscription)
+            elif event.type == 'invoice.paid':
+                # Handle the invoice paid event
+                invoice = event.data.object
+                print(f"Processing invoice.paid event for invoice: {invoice.id}")
+                print(f"Invoice status: {invoice.status}")
+                print(f"Subscription ID: {invoice.subscription}")
+                
+                # Get the subscription ID from the invoice
+                if hasattr(invoice, 'subscription') and invoice.subscription:
+                    subscription_id = invoice.subscription
+                    # Retrieve the subscription
+                    try:
+                        subscription = stripe.Subscription.retrieve(subscription_id)
+                        print(f"Retrieved subscription: {subscription.id} for invoice: {invoice.id}")
+                        # Update the subscription in our database
+                        handle_subscription_updated(subscription)
+                    except Exception as sub_err:
+                        print(f"Error retrieving subscription for invoice: {str(sub_err)}")
+                else:
+                    print(f"No subscription associated with invoice {invoice.id}")
             else:
-                print(f"No subscription associated with invoice {invoice.id}")
-        else:
-            print(f"Unhandled event type: {event.type}")
+                print(f"Unhandled event type: {event.type}")
+        except Exception as handler_err:
+            # Don't return an error response to Stripe - this would cause Stripe to retry the webhook
+            # Instead, log the error and return 200 to acknowledge receipt
+            print(f"Error handling event {event.type}: {str(handler_err)}")
+            import traceback
+            traceback.print_exc()
         
+        # Always return a 200 response to acknowledge receipt of the webhook
+        # Stripe will retry webhooks that don't receive a 2xx response
         return jsonify({'status': 'success'}), 200
+        
     except ValueError as e:
         # Invalid payload
         print(f"Invalid payload: {str(e)}")
@@ -177,7 +188,8 @@ def webhook():
         print(f"Webhook error: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'status': 'failure', 'error': str(e)}), 500
+        # Still return 200 to avoid Stripe retrying - we've logged the error
+        return jsonify({'status': 'received_with_errors', 'error': str(e)}), 200
 
 @stripe_api.route('/verify-session/<session_id>', methods=['GET'])
 def verify_session(session_id):
@@ -256,7 +268,21 @@ def handle_checkout_session_completed(session):
             subscription = stripe.Subscription.retrieve(session.subscription)
             print(f"\nRetrieved subscription: {subscription.id}")
             print(f"Subscription status: {subscription.status}")
-            print(f"Subscription items: {subscription.items.data}")
+            
+            # Handle items data properly
+            subscription_items = None
+            if hasattr(subscription, 'items'):
+                if callable(subscription.items):
+                    # If items is a method, call it to get the data
+                    subscription_items = subscription.items()
+                    print(f"Subscription items (method call): {subscription_items}")
+                else:
+                    # If items is an attribute
+                    print(f"Subscription items (attribute): {subscription.items}")
+                    subscription_items = subscription.items
+            
+            if subscription_items and hasattr(subscription_items, 'data'):
+                print(f"Subscription items data: {subscription_items.data}")
         else:
             print("\nNo subscription ID in the session, looking for it in line items...")
             # Try to get subscription information from line items
