@@ -96,8 +96,9 @@ def webhook():
     print("==================== WEBHOOK REQUEST ====================")
     print(f"Request data: {payload.decode('utf-8')}")
     print(f"Signature header: {sig_header}")
+    print(f"Content-Type: {request.headers.get('Content-Type')}")
+    print(f"User-Agent: {request.headers.get('User-Agent')}")
     print("==================== END REQUEST INFO ====================")
-    print(f"Received webhook with signature: {sig_header[:10]}...")
     
     try:
         # Verify the webhook signature
@@ -114,16 +115,24 @@ def webhook():
             payload, sig_header, config.STRIPE_WEBHOOK_SECRET
         )
         print(f"Webhook event constructed successfully: {event.type}")
+        print(f"Event ID: {event.id}")
+        print(f"Event data: {event.data.object}")
         
         # Handle different event types
         if event.type == 'checkout.session.completed':
             session = event.data.object
             print(f"Processing checkout.session.completed for session: {session.id}")
+            print(f"Session status: {session.status}")
+            print(f"Payment status: {session.payment_status}")
+            print(f"Customer email: {session.customer_email}")
+            print(f"Subscription ID: {session.subscription}")
             # Process the checkout session
             handle_checkout_session_completed(session)
         elif event.type == 'customer.subscription.updated':
             subscription = event.data.object
             print(f"Processing customer.subscription.updated for subscription: {subscription.id}")
+            print(f"Subscription status: {subscription.status}")
+            print(f"Customer ID: {subscription.customer}")
             # Update subscription status
             handle_subscription_updated(subscription)
         elif event.type == 'customer.subscription.deleted':
@@ -135,6 +144,8 @@ def webhook():
             # Handle the invoice paid event
             invoice = event.data.object
             print(f"Processing invoice.paid event for invoice: {invoice.id}")
+            print(f"Invoice status: {invoice.status}")
+            print(f"Subscription ID: {invoice.subscription}")
             
             # Get the subscription ID from the invoice
             if hasattr(invoice, 'subscription') and invoice.subscription:
@@ -223,180 +234,121 @@ def verify_session(session_id):
         return jsonify({'error': str(e)}), 500
 
 def handle_checkout_session_completed(session):
-    """Handle a successful checkout session by updating the user's subscription in the database."""
+    """
+    Handle a completed checkout session
+    """
+    print("\n==================== HANDLING CHECKOUT SESSION ====================")
+    print(f"Session ID: {session.id}")
+    print(f"Customer email: {session.customer_email}")
+    print(f"Subscription ID: {session.subscription}")
+    print(f"Payment status: {session.payment_status}")
+    
     try:
-        print(f"Starting handle_checkout_session_completed for session: {session.id}")
-        print(f"Session data: {session}")
-        
-        # Get customer details
+        # Get the customer details
         customer = stripe.Customer.retrieve(session.customer)
-        user_email = customer.email
+        print(f"\nRetrieved customer: {customer.id}")
+        print(f"Customer email: {customer.email}")
+        print(f"Customer metadata: {customer.metadata}")
         
-        print(f"Retrieved customer: {customer.id} with email: {user_email}")
-        
-        # Get the subscription from the session using line_items
-        subscription_id = None
-        plan_id = None
-        
-        # Option 1: Get subscription from the checkout session directly if available
+        # Get the subscription details if available
+        subscription = None
         if hasattr(session, 'subscription') and session.subscription:
-            subscription_id = session.subscription
-            subscription = stripe.Subscription.retrieve(subscription_id)
-            print(f"Retrieved subscription: {subscription}")
-            # Check if items is callable (it's a method) or an attribute with data
-            if hasattr(subscription, 'items'):
-                if callable(subscription.items):
-                    # If items is a method, call it to get the data
-                    items_data = subscription.items()
-                    print(f"Subscription items (method): {items_data}")
-                    plan_id = items_data.data[0].plan.id if items_data.data else None
-                else:
-                    # If items is an attribute with data property
-                    print(f"Subscription items (attribute): {subscription.items}")
-                    plan_id = subscription.items.data[0].plan.id if hasattr(subscription.items, 'data') and subscription.items.data else None
-            else:
-                plan_id = None
-            print(f"Got subscription from session: {subscription_id}, plan: {plan_id}")
-        
-        # Option 2: If subscription ID isn't directly available, we can try other approaches
-        if not subscription_id and hasattr(session, 'line_items'):
+            subscription = stripe.Subscription.retrieve(session.subscription)
+            print(f"\nRetrieved subscription: {subscription.id}")
+            print(f"Subscription status: {subscription.status}")
+            print(f"Subscription items: {subscription.items.data}")
+        else:
+            print("\nNo subscription ID in the session, looking for it in line items...")
+            # Try to get subscription information from line items
             line_items = stripe.checkout.Session.list_line_items(session.id)
-            print(f"Line items from session: {line_items}")
-            if line_items and line_items.data:
-                plan_id = line_items.data[0].price.id
-                print(f"Got plan from line items: {plan_id}")
+            print(f"Line items: {line_items.data}")
         
-        # Find the user in the database by email
-        user_found = False
-        user_id = None
+        # Find the user in the database using the customer email
+        user_email = customer.email
+        if not user_email and hasattr(session, 'customer_email'):
+            user_email = session.customer_email
+        
+        if not user_email:
+            print("ERROR: Could not find customer email!")
+            return
+            
+        print(f"\nLooking up user in database with email: {user_email}")
         
         # Try looking up in the users table
-        user_response = supabase.from_('users').select('id').eq('email', user_email).execute()
+        user_response = supabase.table('users').select('*').eq('email', user_email).execute()
         print(f"User lookup response: {user_response}")
         
+        user_id = None
         if user_response.data and len(user_response.data) > 0:
             user_id = user_response.data[0]['id']
-            user_found = True
             print(f"Found user with ID: {user_id} in users table")
         else:
-            # Try using the auth system
+            print("User not found in users table, checking auth.users...")
             try:
                 auth_response = supabase.auth.admin.list_users()
-                print(f"Auth response: {auth_response}")
-                if hasattr(auth_response, 'users'):
-                    matching_users = [u for u in auth_response.users if u.email == user_email]
-                    if matching_users:
-                        user_id = matching_users[0].id
-                        user_found = True
+                print(f"Auth response contains {len(auth_response.users)} users")
+                
+                for user in auth_response.users:
+                    print(f"Checking user: {user.email}")
+                    if user.email == user_email:
+                        user_id = user.id
                         print(f"Found user with ID: {user_id} in auth users list")
-                    else:
-                        print(f"Error: User with email {user_email} not found in auth.users")
-                else:
-                    print("Auth response has no users attribute")
+                        break
+                        
+                if not user_id:
+                    print(f"User not found in auth.users with email: {user_email}")
+                    return
             except Exception as auth_err:
                 print(f"Error using auth API: {auth_err}")
+                import traceback
+                traceback.print_exc()
+                return
         
-        if not user_found:
-            print(f"Could not find user with email {user_email} in any database table")
-            return jsonify({'success': False, 'error': 'User not found'}), 404
+        # Update or create subscription in database
+        print(f"\nUpdating subscription in database for user ID: {user_id}")
         
-        # Check if the user already has a subscription
-        sub_response = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
-        print(f"Subscription lookup response: {sub_response}")
+        subscription_data = {
+            'user_id': user_id,
+            'stripe_customer_id': customer.id,
+            'plan_type': 'pro',
+            'status': 'active',
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        if sub_response.data and len(sub_response.data) > 0:
-            # Update existing subscription
-            update_data = {
-                'stripe_customer_id': customer.id,
-                'plan_type': 'pro',  # Assuming all paid subscriptions are pro
-                'status': 'active',
-                'updated_at': datetime.utcnow().isoformat()
-            }
+        if subscription:
+            subscription_data['stripe_subscription_id'] = subscription.id
+            subscription_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
             
-            if subscription_id:
-                update_data['stripe_subscription_id'] = subscription_id
-            
-            if plan_id:
-                update_data['stripe_price_id'] = plan_id
-            
-            # If we have a subscription, add the renewal date
-            if subscription_id:
-                subscription = stripe.Subscription.retrieve(subscription_id)
-                update_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                
-                # Handle items safely
-                billing_period = 'month'  # Default
-                if hasattr(subscription, 'items'):
-                    if callable(subscription.items):
-                        # If items is a method, call it to get the data
-                        items_data = subscription.items()
-                        if items_data.data and len(items_data.data) > 0:
-                            billing_period = items_data.data[0].plan.interval
-                    elif hasattr(subscription.items, 'data') and subscription.items.data:
-                        # If items is an attribute with data property
-                        billing_period = subscription.items.data[0].plan.interval
-                
-                update_data['billing_period'] = billing_period
-            
-            print(f"Updating existing subscription for user {user_id} with data: {update_data}")
-            try:
-                update_response = supabase.table('subscriptions').update(update_data).eq('user_id', user_id).execute()
-                print(f"Subscription updated response: {update_response}")
-            except Exception as update_err:
-                print(f"Error updating subscription: {update_err}")
-                return jsonify({'success': False, 'error': 'Database update error'}), 500
-        else:
-            # Create new subscription
-            create_data = {
-                'user_id': user_id,
-                'stripe_customer_id': customer.id,
-                'plan_type': 'pro',  # Assuming all paid subscriptions are pro
-                'status': 'active',
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
-            }
-            
-            if subscription_id:
-                create_data['stripe_subscription_id'] = subscription_id
-            
-            if plan_id:
-                create_data['stripe_price_id'] = plan_id
-            
-            # If we have a subscription, add the renewal date
-            if subscription_id:
-                subscription = stripe.Subscription.retrieve(subscription_id)
-                create_data['end_date'] = datetime.fromtimestamp(subscription.current_period_end).isoformat()
-                
-                # Handle items safely
-                billing_period = 'month'  # Default
-                if hasattr(subscription, 'items'):
-                    if callable(subscription.items):
-                        # If items is a method, call it to get the data
-                        items_data = subscription.items()
-                        if items_data.data and len(items_data.data) > 0:
-                            billing_period = items_data.data[0].plan.interval
-                    elif hasattr(subscription.items, 'data') and subscription.items.data:
-                        # If items is an attribute with data property
-                        billing_period = subscription.items.data[0].plan.interval
-                
-                create_data['billing_period'] = billing_period
-            
-            print(f"Creating new subscription for user {user_id} with data: {create_data}")
-            try:
-                create_response = supabase.table('subscriptions').insert(create_data).execute()
-                print(f"Subscription creation response: {create_response}")
-            except Exception as create_err:
-                print(f"Error creating subscription: {create_err}")
-                return jsonify({'success': False, 'error': 'Database creation error'}), 500
+        print(f"Subscription data to update: {subscription_data}")
         
-        # Successfully processed the checkout session
-        print(f"Successfully processed checkout session {session.id} for user {user_id}")
-        return jsonify({'success': True}), 200
+        # Check if subscription exists
+        existing_sub = supabase.table('subscriptions').select('*').eq('user_id', user_id).execute()
+        print(f"Existing subscription check: {existing_sub}")
+        
+        try:
+            if existing_sub.data and len(existing_sub.data) > 0:
+                print("Updating existing subscription...")
+                update_response = supabase.table('subscriptions').update(subscription_data).eq('user_id', user_id).execute()
+                print(f"Update response: {update_response}")
+            else:
+                print("Creating new subscription...")
+                subscription_data['created_at'] = datetime.utcnow().isoformat()
+                create_response = supabase.table('subscriptions').insert(subscription_data).execute()
+                print(f"Create response: {create_response}")
+                
+            print("Successfully updated subscription in database")
+        except Exception as db_err:
+            print(f"Database error: {db_err}")
+            import traceback
+            traceback.print_exc()
+            
+        print("==================== END CHECKOUT SESSION HANDLING ====================\n")
+        
     except Exception as e:
         print(f"Error in handle_checkout_session_completed: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
+        raise
 
 def handle_subscription_updated(subscription):
     # Update subscription status in database

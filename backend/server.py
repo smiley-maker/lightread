@@ -677,6 +677,10 @@ def log_request_info():
         print(f"Method: {request.method}")
         print(f"Path: {request.path}")
         print(f"Headers: {dict(request.headers)}")
+        print(f"Content-Type: {request.headers.get('Content-Type')}")
+        print(f"X-Forwarded-For: {request.headers.get('X-Forwarded-For')}")
+        print(f"User-Agent: {request.headers.get('User-Agent')}")
+        print(f"Stripe-Signature: {request.headers.get('Stripe-Signature')}")
         
         # For POST requests, log the body if it's not too large
         if request.method == 'POST' and request.content_length < 10000:
