@@ -127,7 +127,10 @@ def webhook():
                 print(f"Session status: {session.status}")
                 print(f"Payment status: {session.payment_status}")
                 print(f"Customer email: {session.customer_email}")
-                print(f"Subscription ID: {session.subscription}")
+                if hasattr(session, 'subscription'):
+                    print(f"Subscription ID: {session.subscription}")
+                else:
+                    print("No subscription ID in session")
                 # Process the checkout session
                 handle_checkout_session_completed(session)
             elif event.type == 'customer.subscription.updated':
@@ -147,12 +150,23 @@ def webhook():
                 invoice = event.data.object
                 print(f"Processing invoice.paid event for invoice: {invoice.id}")
                 print(f"Invoice status: {invoice.status}")
-                print(f"Subscription ID: {invoice.subscription}")
                 
-                # Get the subscription ID from the invoice
-                if hasattr(invoice, 'subscription') and invoice.subscription:
+                # Check for subscription ID in different places
+                subscription_id = None
+                
+                # Try parent.subscription_details.subscription first
+                if hasattr(invoice, 'parent') and invoice.parent and hasattr(invoice.parent, 'subscription_details'):
+                    if hasattr(invoice.parent.subscription_details, 'subscription'):
+                        subscription_id = invoice.parent.subscription_details.subscription
+                        print(f"Found subscription ID in parent.subscription_details: {subscription_id}")
+                        
+                # If not there, try direct subscription attribute
+                if not subscription_id and hasattr(invoice, 'subscription') and invoice.subscription:
                     subscription_id = invoice.subscription
-                    # Retrieve the subscription
+                    print(f"Found subscription ID in invoice.subscription: {subscription_id}")
+                
+                # If we found a subscription ID, process it
+                if subscription_id:
                     try:
                         subscription = stripe.Subscription.retrieve(subscription_id)
                         print(f"Retrieved subscription: {subscription.id} for invoice: {invoice.id}")
@@ -228,9 +242,20 @@ def verify_session(session_id):
                     print("Looking up user in auth.users...")
                     auth_response = supabase.auth.admin.list_users()
                     
-                    for user in auth_response.users:
-                        if user.email == customer_email:
-                            user_id = user.id
+                    # The response might be a list directly rather than an object with 'users' attribute
+                    users_list = auth_response
+                    if hasattr(auth_response, 'users'):
+                        users_list = auth_response.users
+                        
+                    print(f"Auth response contains {len(users_list)} users")
+                    
+                    for user in users_list:
+                        # User might be a dictionary or an object
+                        user_email_from_list = user.email if hasattr(user, 'email') else user.get('email')
+                        user_id_from_list = user.id if hasattr(user, 'id') else user.get('id')
+                        
+                        if user_email_from_list == customer_email:
+                            user_id = user_id_from_list
                             print(f"Found user with ID: {user_id} in auth users list")
                             break
                             
@@ -238,6 +263,8 @@ def verify_session(session_id):
                         print(f"User not found in auth.users with email: {customer_email}")
                 except Exception as auth_err:
                     print(f"Error using auth API: {auth_err}")
+                    import traceback
+                    traceback.print_exc()
             
             # If we found a user ID, update their subscription
             if user_id and hasattr(session, 'subscription') and session.subscription:
@@ -308,7 +335,10 @@ def handle_checkout_session_completed(session):
     print("\n==================== HANDLING CHECKOUT SESSION ====================")
     print(f"Session ID: {session.id}")
     print(f"Customer email: {session.customer_email}")
-    print(f"Subscription ID: {session.subscription}")
+    if hasattr(session, 'subscription'):
+        print(f"Subscription ID: {session.subscription}")
+    else:
+        print("No subscription ID in session")
     print(f"Payment status: {session.payment_status}")
     
     try:
@@ -362,20 +392,26 @@ def handle_checkout_session_completed(session):
         try:
             print("Looking up user in auth.users...")
             auth_response = supabase.auth.admin.list_users()
-            print(f"Auth response contains {len(auth_response.users)} users")
             
-            user_found = False
-            for user in auth_response.users:
-                print(f"Checking user: {user.email}")
-                if user.email == user_email:
-                    user_id = user.id
-                    user_found = True
+            # The response might be a list directly rather than an object with 'users' attribute
+            users_list = auth_response
+            if hasattr(auth_response, 'users'):
+                users_list = auth_response.users
+                
+            print(f"Auth response contains {len(users_list)} users")
+            
+            for user in users_list:
+                # User might be a dictionary or an object
+                user_email_from_list = user.email if hasattr(user, 'email') else user.get('email')
+                user_id_from_list = user.id if hasattr(user, 'id') else user.get('id')
+                
+                if user_email_from_list == user_email:
+                    user_id = user_id_from_list
                     print(f"Found user with ID: {user_id} in auth users list")
                     break
                     
-            if not user_found:
+            if not user_id:
                 print(f"User not found in auth.users with email: {user_email}")
-                return
         except Exception as auth_err:
             print(f"Error using auth API: {auth_err}")
             import traceback
