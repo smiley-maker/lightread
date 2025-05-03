@@ -1,116 +1,54 @@
-# LightRead Chrome Extension
+# LightRead: Summarize Web Content with AI
 
-An AI-powered text summarization extension that helps you quickly digest content from any webpage.
+**Effortlessly digest web content tailored to your needs.**
 
-## Development Setup
+LightRead is a powerful Chrome extension that leverages the capabilities of the Gemini 1.5 Flash AI model to provide customizable summaries of any text you select on a webpage. Whether you're a student, professional, or simply looking to consume information more efficiently, LightRead helps you quickly understand the core of any article, document, or web content.
 
-### Prerequisites
+**Key Features:**
 
-- Node.js (v14+)
-- npm
+* **Select and Summarize:** Simply highlight the text you want to summarize, right-click, and select "Summarize with LightRead." A convenient popup will appear with your generated summary.
+* **Customizable Summary Lengths (Free & Pro):** Get summaries that fit your needs with preset options for short, medium, and long lengths.
+* **Adjustable Tone and Difficulty (Pro Feature):** Tailor summaries to your specific requirements with a wide range of tone (e.g., academic, conversational, humorous) and difficulty level (e.g., eli5, college, technical) options. Regenerate summaries on the fly within the popup.
+* **Integrated Text-to-Speech:** Listen to your summaries with Chrome's native text-to-speech, with planned integrations for ElevenLabs and Google's AI TTS for enhanced voice options.
+* **Save and Organize Summaries:** Easily save generated summaries to your personal dashboard for future reference. Optionally save the source page URL along with the summary.
+* **User Dashboard:** Manage your saved summaries, adjust preferences, monitor daily usage, and manage your subscription (Pro).
+* **Freemium Model:** Get started with our free tier offering 5 summaries per day. Upgrade to LightRead Pro for expanded daily summaries (30/day) and access to advanced tone and difficulty customization.
+* **Powered by Gemini 1.5 Flash:** Benefit from the advanced natural language processing capabilities of Google's Gemini 1.5 Flash model for accurate and relevant summaries.
 
-### Installation
+**Why Use LightRead?**
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd lightread
-   ```
+In today's information-rich world, it's easy to feel overwhelmed. LightRead is designed to help you:
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+* **Save Time:** Quickly grasp the main points of long articles, reports, or documents without reading every word.
+* **Improve Comprehension:** Understand complex topics more easily by simplifying the language or adjusting the tone.
+* **Process Information Efficiently:** Stay on top of industry news, research, or learning materials effectively.
+* **Enhance Accessibility:** Provide a more accessible way for individuals with reading difficulties to consume online content.
 
-3. Create your environment configuration:
-   ```bash
-   cp env.example .env
-   ```
+**Getting Started:**
 
-4. Edit the `.env` file and set your server URLs.
+1.  Install the LightRead Chrome extension from the Chrome Web Store <!--[Link to Chrome Web Store Page - Add Later] -->.
+2. Create an account on our [website](https://lightread.xyz).
+3. Log in to the extension by clicking the icon on the Chrome toolbar and moving to the account tab. 
+4.  Highlight any text on a webpage.
+5.  Right-click the highlighted text.
+6.  Select "Summarize with LightRead" from the context menu.
+7.  View your summary in the popup window. 
+8.  With a pro subscription you can adjust the tone and difficulty level of the summary to get a different version right in the popup!
+9.  You can also save your summary and view it later in the dashboard, or copy it to the clipboard. 
 
-### Building the Extension
+**Pricing:**
 
-#### Development Build
+* **Free Tier:** 5 summaries per day, standard features including summary length adjustment and dashboard with summary history.
+* **LightRead Pro:** $5/month, 30 summaries per day, access to advanced tone and difficulty customization, and early access to new features.
 
-For local development:
+**Support and Feedback:**
 
-```bash
-npm run build:dev
-```
+We're constantly working to improve LightRead. If you encounter any issues or have suggestions, please reach out or post a comment through the LightRead dashboard.
 
-This will generate the `extension/config.js` file with the development server URL and update the manifest.json.
+**Privacy:**
 
-#### Production Build
+Your privacy is important to us. We process highlighted text through the Gemini 1.5 Flash model for summarization but do not save the original text. We only store summaries you choose to save to your dashboard, with the option to exclude the source URL. Feel free to read more about our privacy policy on our website [here](https://www.lightread.xyz/privacy)
 
-For production deployment:
+**Future Development:**
 
-```bash
-npm run build:prod
-```
-
-This requires a `PROD_SERVER_URL` to be set in your `.env` file.
-
-### Packaging for Chrome Web Store
-
-To create a ZIP file for the Chrome Web Store:
-
-```bash
-npm run package
-```
-
-This will:
-1. Run the production build
-2. Create a clean distribution folder 
-3. Copy the extension files to the distribution folder
-4. Remove source files that shouldn't be in the package
-5. Generate a ZIP file ready for upload
-
-The final package will be located at `./lightread-extension.zip`.
-
-## Security Considerations
-
-### Environment Variables
-
-- `.env` files are never included in the extension package
-- Server URLs are injected at build time into the `config.js` file
-- The build process will fail if required environment variables are missing
-
-### Sensitive Files
-
-The following files are not included in the extension package:
-- `.env` and any other environment files
-- `build.js` and other build scripts
-- Source code and development files
-
-### Privacy Policy
-
-You must provide a privacy policy URL when submitting your extension to the Chrome Web Store. Ensure your privacy policy addresses:
-
-- What data is collected
-- How data is used
-- User control over data
-- Data retention policies
-- Third-party sharing (if any)
-
-Your privacy policy should be hosted on a stable URL that won't change, as changing the privacy policy URL requires a new submission to the Chrome Web Store.
-
-## Project Structure
-
-```
-├── extension/           # Extension source code (uploaded to Chrome Web Store)
-│   ├── background.js    # Background script
-│   ├── popup.js         # Popup UI script
-│   ├── popup.html       # Popup UI HTML
-│   ├── config.js        # Generated config (not committed to Git)
-│   └── config.sample.js # Config template
-├── build.js             # Build script
-├── package.json         # Project configuration
-├── frontend/            # Web app frontend code
-├── backend/             # API backend code
-└── .env                 # Environment variables (not uploaded or committed)
-```
-
-## License
-
-[License information]
+We have exciting plans for LightRead, including potential integrations with platforms like Notion and the ability to summarize image content. If you'd like to contribute, please follow the guidelines described in `CONTRIBUTING.md`, and thanks for joining the adventure!
