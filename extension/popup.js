@@ -326,11 +326,58 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     }
 });
 
+// Helper to decode JWT and get payload
+function decodeJwt(token) {
+    try {
+        const payload = token.split('.')[1];
+        // Add padding if needed
+        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    } catch (e) {
+        return null;
+    }
+}
+
 // Authentication
 async function checkAuth() {
     const { token, user } = await chrome.storage.local.get(['token', 'user']);
     
     if (token && user) {
+        // Decode token expiry
+        const payload = decodeJwt(token);
+        const now = Math.floor(Date.now() / 1000);
+        let validToken = true;
+        if (payload && payload.exp && payload.exp < now) {
+            // Token expired, try to refresh
+            try {
+                const response = await fetchWithAuth('/auth/refresh', { method: 'POST' });
+                if (response && response.token) {
+                    await chrome.storage.local.set({ token: response.token });
+                    // Also notify the background script
+                    chrome.runtime.sendMessage({ 
+                        type: 'SESSION_UPDATE', 
+                        jwtToken: response.token,
+                        session: { email: user.email }
+                    });
+                } else {
+                    validToken = false;
+                }
+            } catch (e) {
+                validToken = false;
+            }
+        }
+        if (!validToken) {
+            // Refresh failed, clear storage and show login
+            await chrome.storage.local.remove(['token', 'user']);
+            chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+            return;
+        }
+        // Token is valid, show user info
         document.getElementById('loginForm').style.display = 'none';
         document.getElementById('userInfo').style.display = 'block';
         document.getElementById('userEmail').textContent = user.email;

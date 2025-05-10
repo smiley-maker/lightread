@@ -102,6 +102,20 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+// Helper to decode JWT and get payload
+function decodeJwt(token) {
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
+}
+
 // Handle context menu clicks
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "summarizeText" && info.selectionText) {
@@ -124,6 +138,40 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         } else {
           throw new Error('Please login to use LightRead');
         }
+      }
+
+      // JWT expiry check and refresh logic
+      const payload = decodeJwt(authState.token);
+      const now = Math.floor(Date.now() / 1000);
+      let validToken = true;
+      if (payload && payload.exp && payload.exp < now) {
+        // Token expired, try to refresh
+        try {
+          const response = await fetch(`${SERVER_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authState.token}`
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            authState.token = data.token;
+            await chrome.storage.local.set({ token: data.token });
+          } else {
+            validToken = false;
+          }
+        } catch (e) {
+          validToken = false;
+        }
+      }
+      if (!validToken) {
+        // Refresh failed, clear auth state and show error
+        authState = { isLoggedIn: false, token: null, user: null };
+        await chrome.storage.local.remove(['token', 'user']);
+        chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
+        throw new Error('Session expired. Please login again.');
       }
 
       // Get user settings for summary preferences
