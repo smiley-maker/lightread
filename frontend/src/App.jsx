@@ -8,6 +8,8 @@ import { Menu, X } from 'lucide-react';
 import FeatureCard from './components/FeatureCard/FeatureCard';
 import ScrollAnimation from './components/ScrollAnimation';
 import AuthForm from './components/AuthForm/AuthForm';
+import PlanSelection from './components/PlanSelection/PlanSelection';
+import SetupGuide from './components/SetupGuide/SetupGuide';
 import { useAuth } from './contexts/AuthContext';
 import BookmarkIcon from './assets/bookmark.svg';
 import ClipboardCopyIcon from './assets/copy paste.svg';
@@ -23,23 +25,18 @@ const App = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, loading } = useAuth();
   const [showAuthForm, setShowAuthForm] = useState(false);
+  const [showPlanSelection, setShowPlanSelection] = useState(false);
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const navigate = useNavigate();
 
   // Check if user has completed onboarding
   useEffect(() => {
     if (user) {
-      // Check if user has completed onboarding or has a subscription
+      // Check if user has a subscription (indicating they completed onboarding)
       const checkOnboardingStatus = async () => {
         try {
-          // Check local storage first
-          const onboardingCompleted = localStorage.getItem('onboarding_completed');
-          if (onboardingCompleted) {
-            setHasCompletedOnboarding(true);
-            return;
-          }
-
-          // Check if user has a subscription (indicating they completed onboarding)
           const { data: subscription, error } = await supabase
             .from('subscriptions')
             .select('*')
@@ -95,18 +92,32 @@ const App = () => {
 
   const handleAuthButtonClick = () => {
     setShowAuthForm(true);
+    setShowPlanSelection(false);
+    setShowSetupGuide(false);
+    setSelectedPlan(null);
+    setHasCompletedOnboarding(false);
   };
 
   const handleAuthSuccess = (data) => {
     if (data?.user) {
       setShowAuthForm(false);
-      // Redirect to onboarding flow after successful auth
-      navigate('/onboarding/welcome');
+      setShowPlanSelection(true); // Show plan selection after successful auth
     } else {
       console.error('Auth successful but user data is missing');
-      // Still hide the form but don't redirect
+      // Still hide the form but don't show plan selection
       setShowAuthForm(false);
     }
+  };
+
+  const handlePlanSelectionComplete = (planType) => {
+    setSelectedPlan(planType);
+    setShowPlanSelection(false);
+    // Redirect to onboarding route
+    navigate('/onboarding');
+  };
+
+  const handleCloseSetupGuide = () => {
+    setShowSetupGuide(false);
   };
 
   const handleDashboardClick = () => {
@@ -129,9 +140,11 @@ const App = () => {
   }
 
   if (user && !hasCompletedOnboarding) {
-    // If user is logged in but hasn't completed onboarding, redirect to onboarding
-    navigate('/onboarding/welcome');
-    return null;
+    if (showPlanSelection) {
+      return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;
+    }
+    // If user is logged in but hasn't completed onboarding, show plan selection
+    return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;
   }
 
   return (

@@ -147,10 +147,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       if (payload && payload.exp && payload.exp < now) {
         // Token expired, try to refresh
         try {
-          const response = await fetchWithAuth('/auth/refresh', { method: 'POST' });
-          if (response && response.token) {
-            authState.token = response.token;
-            await chrome.storage.local.set({ token: response.token });
+          const response = await fetch(`${SERVER_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authState.token}`
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            authState.token = data.token;
+            await chrome.storage.local.set({ token: data.token });
           } else {
             validToken = false;
           }

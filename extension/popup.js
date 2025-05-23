@@ -4,9 +4,6 @@ import config from './config.js';
 // Use the SERVER_URL from config
 const SERVER_URL = config.SERVER_URL;
 
-// UI state management
-let currentUIState = 'welcome'; // 'welcome', 'signin', 'authenticated'
-
 // Helper function for fetch requests with proper CORS and error handling
 async function fetchWithAuth(endpoint, options = {}) {
   const { token } = await chrome.storage.local.get('token');
@@ -83,45 +80,7 @@ async function refreshToken() {
   }
 }
 
-// UI state management functions
-function showWelcomeScreen() {
-  currentUIState = 'welcome';
-  document.getElementById('welcomeScreen').style.display = 'block';
-  document.getElementById('signinForm').style.display = 'none';
-  document.getElementById('authenticatedInterface').style.display = 'none';
-}
-
-function showSigninForm() {
-  currentUIState = 'signin';
-  document.getElementById('welcomeScreen').style.display = 'none';
-  document.getElementById('signinForm').style.display = 'block';
-  document.getElementById('authenticatedInterface').style.display = 'none';
-  
-  // Clear any previous error messages
-  document.getElementById('loginError').textContent = '';
-  
-  // Focus on email input
-  document.getElementById('email').focus();
-}
-
-function showAuthenticatedInterface() {
-  currentUIState = 'authenticated';
-  document.getElementById('welcomeScreen').style.display = 'none';
-  document.getElementById('signinForm').style.display = 'none';
-  document.getElementById('authenticatedInterface').style.display = 'block';
-}
-
-// Event listeners for new UI elements
-document.getElementById('showSigninButton').addEventListener('click', showSigninForm);
-
-document.getElementById('showSignupButton').addEventListener('click', () => {
-  // Open signup page in new tab
-  chrome.tabs.create({ url: config.FRONTEND_URL || 'https://lightread.app' });
-});
-
-document.getElementById('backToWelcome').addEventListener('click', showWelcomeScreen);
-
-// Tab switching (only for authenticated interface)
+// Tab switching
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -411,19 +370,21 @@ async function checkAuth() {
             }
         }
         if (!validToken) {
-            // Refresh failed, clear storage and show welcome screen
+            // Refresh failed, clear storage and show login
             await chrome.storage.local.remove(['token', 'user']);
             chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
-            showWelcomeScreen();
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
             return;
         }
-        // Token is valid, show authenticated interface
-        showAuthenticatedInterface();
+        // Token is valid, show user info
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('userInfo').style.display = 'block';
         document.getElementById('userEmail').textContent = user.email;
         loadUserData();
     } else {
-        // No token/user, show welcome screen
-        showWelcomeScreen();
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('userInfo').style.display = 'none';
     }
 }
 
@@ -441,7 +402,7 @@ document.getElementById('loginButton').addEventListener('click', async () => {
 
     try {
         document.getElementById('loginButton').disabled = true;
-        document.getElementById('loginButton').textContent = 'Signing in...';
+        document.getElementById('loginButton').textContent = 'Logging in...';
         
         const response = await fetch(`${SERVER_URL}/auth/login`, {
             method: 'POST',
@@ -471,15 +432,12 @@ document.getElementById('loginButton').addEventListener('click', async () => {
             session: { email }
         });
 
-        // Show success and transition to authenticated interface
-        showAuthenticatedInterface();
-        document.getElementById('userEmail').textContent = email;
-        loadUserData();
+        checkAuth();
     } catch (error) {
         loginError.textContent = error.message || 'Login failed. Please try again.';
     } finally {
         document.getElementById('loginButton').disabled = false;
-        document.getElementById('loginButton').textContent = 'Sign In';
+        document.getElementById('loginButton').textContent = 'Login';
     }
 });
 
@@ -496,8 +454,7 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
         // Notify background script
         chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
         
-        // Show welcome screen after logout
-        showWelcomeScreen();
+        checkAuth();
     } catch (error) {
         console.error('Error during logout:', error);
     } finally {
@@ -512,13 +469,10 @@ document.addEventListener("DOMContentLoaded", function() {
     const signupLink = document.getElementById("goToSignup");
     if (signupLink) {
         signupLink.addEventListener("click", function(event) {
-            event.preventDefault();
-            // Open signup page with proper URL
-            chrome.tabs.create({ url: config.FRONTEND_URL || 'https://lightread.app' });
+            chrome.tabs.create({ url: "http://localhost:5173" });
         });
     }
 
-    // Initialize the popup
     checkAuth();
 });
 

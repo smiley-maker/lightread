@@ -28,16 +28,11 @@ def create_checkout_session():
         data = request.json
         customer_email = data.get('email', '')
         price_id = data.get('priceId', STRIPE_PRICE_ID)  # Use priceId from request, fallback to env var
-        redirect_path = data.get('redirectPath', '/dashboard?tab=billing')  # Allow custom redirect path
         
         if not price_id:
             return jsonify({'error': 'Price ID is required'}), 400
             
         print(f"Creating checkout session for email: {customer_email} and price ID: {price_id}")
-        print(f"Redirect path: {redirect_path}")
-        
-        # Base URL for redirects - use environment variable or fallback
-        base_url = os.environ.get('FRONTEND_URL', 'https://www.lightread.xyz')
         
         # Create Stripe checkout session
         session = stripe.checkout.Session.create(
@@ -47,13 +42,12 @@ def create_checkout_session():
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=f'{base_url}{redirect_path}&session_id={{CHECKOUT_SESSION_ID}}',
-            cancel_url=f'{base_url}{redirect_path}',
+            success_url='https://www.lightread.xyz/dashboard?tab=billing&session_id={CHECKOUT_SESSION_ID}',
+            cancel_url='https://www.lightread.xyz/dashboard?tab=billing',
             customer_email=customer_email,
         )
         
         print(f"Created checkout session: {session.id} for {customer_email}")
-        print(f"Success URL: {base_url}{redirect_path}&session_id={{CHECKOUT_SESSION_ID}}")
         
         # Return the session ID for the frontend to use
         return jsonify({'id': session.id}), 200
