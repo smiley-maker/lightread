@@ -7,13 +7,14 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://lightread-backend.herok
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 // Create a checkout session for subscription
-export const createCheckoutSession = async (priceId) => {
+export const createCheckoutSession = async (priceId, redirectPath = '/dashboard?tab=billing') => {
   try {
     // Get the user email from localStorage or use an empty string
     const userEmail = localStorage.getItem('userEmail') || '';
     
     console.log(`Creating checkout session for price ID: ${priceId} and email: ${userEmail}`);
     console.log(`Using API URL: ${API_URL}`);
+    console.log(`Redirect path: ${redirectPath}`);
     
     // Create the checkout session
     const response = await fetch(`${API_URL}/api/create-checkout-session`, {
@@ -25,7 +26,8 @@ export const createCheckoutSession = async (priceId) => {
       credentials: 'include',
       body: JSON.stringify({ 
         email: userEmail,
-        priceId: priceId
+        priceId: priceId,
+        redirectPath: redirectPath
       }),
     });
 

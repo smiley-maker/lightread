@@ -7,10 +7,12 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 const environments = {
   development: {
     // If DEV_SERVER_URL is not set, use PROD_SERVER_URL or SERVER_URL as fallback
-    SERVER_URL: process.env.DEV_SERVER_URL || process.env.PROD_SERVER_URL || process.env.SERVER_URL || 'http://localhost:3000'
+    SERVER_URL: process.env.DEV_SERVER_URL || process.env.PROD_SERVER_URL || process.env.SERVER_URL || 'http://localhost:3000',
+    FRONTEND_URL: process.env.DEV_FRONTEND_URL || process.env.FRONTEND_URL || 'http://localhost:5173'
   },
   production: {
-    SERVER_URL: process.env.PROD_SERVER_URL || process.env.SERVER_URL
+    SERVER_URL: process.env.PROD_SERVER_URL || process.env.SERVER_URL,
+    FRONTEND_URL: process.env.PROD_FRONTEND_URL || process.env.FRONTEND_URL || 'https://lightread.app'
   }
 };
 
@@ -64,6 +66,7 @@ fs.writeFileSync(
 
 console.log('Config file generated successfully.');
 console.log('Server URL:', environments[env].SERVER_URL);
+console.log('Frontend URL:', environments[env].FRONTEND_URL);
 
 // Update the manifest.json file with environment-specific host permissions
 const manifestPath = path.join(__dirname, 'extension', 'manifest.json');

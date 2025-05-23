@@ -62,6 +62,58 @@
             background-color: var(--border-color);
         }
 
+        .welcome-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .welcome-screen h2 {
+            margin-bottom: 12px;
+            color: var(--text-color);
+            font-size: 18px;
+        }
+
+        .welcome-screen p {
+            margin-bottom: 20px;
+            color: var(--text-color);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .btn-signin {
+            background-color: var(--primary-color);
+            color: black;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-signup {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 12px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .btn-signup:hover {
+            background-color: var(--primary-color);
+            color: black;
+        }
+
         .tabs {
             display: flex;
             border-bottom: 1px solid var(--border-color);
@@ -201,6 +253,16 @@
         .plan-limits p {
             margin: 5px 0;
         }
+
+        .back-button {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 12px;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -210,75 +272,88 @@
             <button class="close-button" id="closeButton">×</button>
         </div>
 
-        <div class="usage-display">
-            <div>Daily Usage</div>
-            <div class="usage-progress">
-                <div class="usage-progress-bar" id="usageProgress" style="width: 0%"></div>
+        <!-- Welcome Screen for unauthenticated users -->
+        <div id="welcomeScreen" class="welcome-screen" style="display: none;">
+            <h2>Welcome to LightRead!</h2>
+            <p>To start summarizing content with AI, you'll need to sign in or create an account.</p>
+            <div class="auth-buttons">
+                <button class="btn-signin" id="showSigninButton">Sign In</button>
+                <button class="btn-signup" id="showSignupButton">Create Account</button>
             </div>
-            <div id="usageText">0/5 summaries used today</div>
-            <button class="upgrade-button" id="upgradeButton">Upgrade to Premium</button>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" data-tab="settings">Settings</div>
-            <div class="tab" data-tab="auth">Account</div>
+        <!-- Sign In Form -->
+        <div id="signinForm" class="auth-form" style="display: none;">
+            <button class="back-button" id="backToWelcome">← Back</button>
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="loginButton">Sign In</button>
+            <div class="error" id="loginError"></div>
+            <div class="auth-toggle">
+                Don't have an account? <a id="goToSignup" href="#" target="_blank" rel="noopener noreferrer">Sign up</a>
+            </div>
         </div>
 
-        <!-- Settings Tab -->
-        <div id="settings" class="content active">
-            <div class="settings-option">
-                <label for="summaryLength">Preferred Summary Length</label>
-                <select id="summaryLength">
-                </select>
-            </div>
-            <div class="settings-option">
-                <label for="theme">Theme</label>
-                <select id="theme">
-                </select>
-            </div>
-            <div class="settings-option pro-only" style="display: none;">
-                <label for="summaryTone">Summary Tone</label>
-                <select id="summaryTone">
-                </select>
-            </div>
-            <div class="settings-option pro-only" style="display: none;">
-                <label for="summaryDifficulty">Summary Difficulty</label>
-                <select id="summaryDifficulty">
-                </select>
-            </div>
-            <div class="settings-option">
-                <label for="saveSourceUrl">Save Source URL</label>
-                <select id="saveSourceUrl">
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                </select>
-            </div>
-            <button id="saveSettings">Save Settings</button>
-            <div id="settingsMessage" class="success-message"></div>
-            
-
-        </div>
-
-        <!-- Auth Tab -->
-        <div id="auth" class="content">
-            <div id="loginForm" class="auth-form">
-                <input type="email" id="email" placeholder="Email" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button id="loginButton">Login</button>
-                <div class="error" id="loginError"></div>
-                <div class="auth-toggle">
-                    Don't have an account? <a id="goToSignup" href="http://localhost:5173" target="_blank" rel="noopener noreferrer">Sign up</a>
+        <!-- Authenticated User Interface -->
+        <div id="authenticatedInterface" style="display: none;">
+            <div class="usage-display">
+                <div>Daily Usage</div>
+                <div class="usage-progress">
+                    <div class="usage-progress-bar" id="usageProgress" style="width: 0%"></div>
                 </div>
+                <div id="usageText">0/5 summaries used today</div>
+                <button class="upgrade-button" id="upgradeButton">Upgrade to Premium</button>
             </div>
 
-            <div id="userInfo" style="display: none;">
-                <p>Logged in as: <span id="userEmail"></span></p>
-                <p>Plan: <span id="userPlan">Free</span></p>
-                <div class="plan-limits">
-                    <p>Daily limit: <span id="dailyLimit">5</span> summaries</p>
-                    <p>Max text length: <span id="maxTextLength">10000</span> characters</p>
+            <div class="tabs">
+                <div class="tab active" data-tab="settings">Settings</div>
+                <div class="tab" data-tab="auth">Account</div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settings" class="content active">
+                <div class="settings-option">
+                    <label for="summaryLength">Preferred Summary Length</label>
+                    <select id="summaryLength">
+                    </select>
                 </div>
-                <button id="logoutButton">Logout</button>
+                <div class="settings-option">
+                    <label for="theme">Theme</label>
+                    <select id="theme">
+                    </select>
+                </div>
+                <div class="settings-option pro-only" style="display: none;">
+                    <label for="summaryTone">Summary Tone</label>
+                    <select id="summaryTone">
+                    </select>
+                </div>
+                <div class="settings-option pro-only" style="display: none;">
+                    <label for="summaryDifficulty">Summary Difficulty</label>
+                    <select id="summaryDifficulty">
+                    </select>
+                </div>
+                <div class="settings-option">
+                    <label for="saveSourceUrl">Save Source URL</label>
+                    <select id="saveSourceUrl">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <button id="saveSettings">Save Settings</button>
+                <div id="settingsMessage" class="success-message"></div>
+            </div>
+
+            <!-- Auth Tab -->
+            <div id="auth" class="content">
+                <div id="userInfo">
+                    <p>Logged in as: <span id="userEmail"></span></p>
+                    <p>Plan: <span id="userPlan">Free</span></p>
+                    <div class="plan-limits">
+                        <p>Daily limit: <span id="dailyLimit">5</span> summaries</p>
+                        <p>Max text length: <span id="maxTextLength">10000</span> characters</p>
+                    </div>
+                    <button id="logoutButton">Logout</button>
+                </div>
             </div>
         </div>
     </div>

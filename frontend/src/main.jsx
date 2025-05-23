@@ -16,67 +16,78 @@ import Summaries from './pages/Dashboard/Summaries.jsx'
 import Settings from './pages/Dashboard/Settings.jsx'
 import Billing from './pages/Dashboard/Billing.jsx'
 import Feedback from './pages/Dashboard/Feedback.jsx'
-import SetupGuide from './components/SetupGuide/SetupGuide.jsx'
+import Welcome from './pages/Onboarding/Welcome.jsx'
+import PlanSelection from './pages/Onboarding/PlanSelection.jsx'
+import HowItWorks from './pages/Onboarding/HowItWorks.jsx'
+import StripeSuccess from './pages/Onboarding/StripeSuccess.jsx'
 
 /**
- * Router configuration for the application.
- * Defines the main routes and their corresponding components.
- * 
- * Routes:
+ * Router configuration defines all application routes:
  * - / : Landing page
- * - /dashboard: Protected dashboard area
- *   - / (index): Summaries view
- *   - /summaries: Summaries view
- *   - /settings: User settings
- *   - /billing: Subscription management
- *   - /feedback: Feedback form
- * - /terms: Terms of Service
- * - /privacy: Privacy Policy
+ * - /dashboard : Main dashboard (redirects to summaries)
+ * - /dashboard/summaries : User's summary history
+ * - /dashboard/settings : User preferences and configuration
+ * - /dashboard/billing : Subscription management
+ * - /onboarding/* : Multi-step onboarding flow
+ *   - /onboarding/welcome : Initial welcome page
+ *   - /onboarding/plan-selection : Choose free or pro plan
+ *   - /onboarding/how-it-works : Instructions and demo
+ *   - /onboarding/stripe-success : Payment confirmation and redirect
+ * - /terms : Terms of Service
+ * - /privacy : Privacy Policy
  */
 const router = createBrowserRouter([
   {
-    path: '/',
+    path: "/",
     element: <App />,
   },
   {
-    path: '/onboarding',
-    element: <SetupGuide />,
-  },
-  {
-    path: '/dashboard',
+    path: "/dashboard",
     element: <DashboardLayout />,
     children: [
       {
         index: true,
-        element: <Summaries />,
+        element: <Dashboard />
       },
       {
-        path: 'summaries',
-        element: <Summaries />,
+        path: "summaries",
+        element: <Summaries />
       },
       {
-        path: 'settings',
-        element: <Settings />,
+        path: "settings", 
+        element: <Settings />
       },
       {
-        path: 'billing',
-        element: <Billing />,
-      },
-      {
-        path: 'feedback',
-        element: <Feedback />,
-      },
-    ],
+        path: "billing",
+        element: <Billing />
+      }
+    ]
   },
   {
-    path: '/terms',
-    element: <TermsOfService />,
+    path: "/onboarding/welcome",
+    element: <Welcome />
   },
   {
-    path: '/privacy',
-    element: <PrivacyPolicy />,
+    path: "/onboarding/plan-selection", 
+    element: <PlanSelection />
+  },
+  {
+    path: "/onboarding/how-it-works",
+    element: <HowItWorks />
+  },
+  {
+    path: "/onboarding/stripe-success",
+    element: <StripeSuccess />
+  },
+  {
+    path: "/terms",
+    element: <TermsOfService />
+  },
+  {
+    path: "/privacy",
+    element: <PrivacyPolicy />
   }
-])
+]);
 
 // Initialize React with StrictMode and required providers
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -86,3 +97,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </AuthProvider>
   </React.StrictMode>,
 )
+
