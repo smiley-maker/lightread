@@ -119,7 +119,6 @@ export const AuthProvider = ({ children }) => {
       if (result.error) {
         throw result.error;
       }
-      setUser(result.data?.user || null);
       return result;
     } catch (error) {
       console.error('Signup error:', error);
