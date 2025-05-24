@@ -192,7 +192,7 @@ const SetupGuide = ({ onComplete }) => {
                   </button>
                 </div>
                 <div className={`plan-card-figma pro${selectedPlan === 'pro' ? ' active' : ''}`}> 
-                  <div className="plan-card-header">Pro</div>
+                  <div className="plan-card-header pro">Pro</div>
                   <div className="plan-card-price-row">
                     <span className="plan-card-price">$5</span>
                     <span className="plan-card-period">/month</span>
@@ -216,24 +216,19 @@ const SetupGuide = ({ onComplete }) => {
           )}
           {currentStep === 2 && (
             <div className="onboarding-step-content">
-              <button className="onboarding-top-btn" onClick={currentStepData.action}>install extension</button>
               <div className="onboarding-step-icon"><span className="onboarding-icon-chrome">{currentStepData.icon}</span></div>
               <h2 className="onboarding-step-title">Install the Chrome Extension</h2>
               <div className="onboarding-step-underline" />
               <p className="onboarding-step-desc">Add LightRead to your Chrome browser to start summarizing text instantly.</p>
-              <button className="onboarding-main-btn" onClick={currentStepData.action}>install extension</button>
+              <button className="btn-primary btn" onClick={currentStepData.action}>install extension</button>
             </div>
           )}
           {currentStep === 3 && (
             <div className="onboarding-step-content">
-              <div className="onboarding-tip-box">
-                <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
-                If you don't see it, click the puzzle icon and pin LightRead for easy access!
-              </div>
               <div className="onboarding-step-icon"><span className="onboarding-icon-sparkles">{currentStepData.icon}</span></div>
               <h2 className="onboarding-step-title">Sign In to the Extension</h2>
               <div className="onboarding-step-underline" />
-              <p className="onboarding-step-desc">Click the LightRead icon in your Chrome toolbar and sign in with your account. This lets the extension save your summaries and unlocks all features.</p>
+              <p className="onboarding-desc">Click the LightRead icon in your Chrome toolbar and sign in with your account. This lets the extension save your summaries and unlocks all features.</p>
               <div className="onboarding-tip-box">
                 <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
                 If you don't see it, click the puzzle icon and pin LightRead for easy access!
@@ -242,28 +237,10 @@ const SetupGuide = ({ onComplete }) => {
           )}
           {currentStep === 4 && (
             <div className="onboarding-step-content">
-              <div className="onboarding-summary-demo">
-                <div className="onboarding-summary-label">Here's some sample text you can try summarizing:</div>
-                <div className="onboarding-summary-box">
-                  <div
-                    className="onboarding-summary-text"
-                    ref={demoTextRef}
-                    tabIndex={0}
-                    onClick={handleDemoTextClick}
-                    title="Click the box to auto-select all text"
-                    style={{ userSelect: 'text' }}
-                  >
-                    LightRead is an AI-powered Chrome extension that helps you quickly understand any text you find online. Simply highlight the text you want to summarize, right-click, and select "Summarize with LightRead" to get an instant summary.
-                  </div>
-                </div>
-                <div className="onboarding-summary-tip">Click the box to auto-select all text!</div>
-              </div>
               <div className="onboarding-step-icon"><span className="onboarding-icon-check">{currentStepData.icon}</span></div>
               <h2 className="onboarding-step-title">Try Your First Summary</h2>
               <div className="onboarding-step-underline" />
-              <p className="onboarding-step-desc">Highlight the text below, right-click, and select "Summarize with LightRead" to see it in action!</p>
               <div className="onboarding-summary-demo">
-                <div className="onboarding-summary-label">Here's some sample text you can try summarizing:</div>
                 <div className="onboarding-summary-box">
                   <div
                     className="onboarding-summary-text"
@@ -273,10 +250,10 @@ const SetupGuide = ({ onComplete }) => {
                     title="Click the box to auto-select all text"
                     style={{ userSelect: 'text' }}
                   >
-                    LightRead is an AI-powered Chrome extension that helps you quickly understand any text you find online. Simply highlight the text you want to summarize, right-click, and select "Summarize with LightRead" to get an instant summary.
+                    Try summarizing this text by highlighting it, right clicking, and selecting summarize with LightRead. This will display a popup right in your browser window with the summarized text, options to copy and save the summary, and if you’re on the pro plan it will show options to regenerate the summary using the same starter text but with more customizable options like summary tone and difficulty level. Try saving the summary and when you click next you will be able to see it in your dashboard.
                   </div>
                 </div>
-                <div className="onboarding-summary-tip">Click the box to auto-select all text!</div>
+                <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
               </div>
             </div>
           )}

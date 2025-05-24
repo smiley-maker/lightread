@@ -98,6 +98,11 @@
   text-align: center;
 }
 
+.onboarding-step-content {
+  text-align: center;
+
+}
+
 .step-icon {
   width: 64px;
   height: 64px;
@@ -167,6 +172,8 @@
   display: flex;
   justify-content: center;
   gap: 1rem;
+  padding-bottom: 2rem;
+  padding-top: 2rem;
 }
 
 .btn {
@@ -227,10 +234,6 @@
     font-size: 1rem;
   }
 
-  .setup-actions {
-    flex-direction: column;
-  }
-
   .btn {
     width: 100%;
   }
@@ -263,10 +266,30 @@
 
 .auto-highlight-tip {
   margin-top: 0.75rem;
-  color: var(--primary);
+  color: rgba(0, 0, 0, 0.538);
   font-size: 0.95rem;
   font-style: italic;
   text-align: center;
+}
+
+.onboarding-tip-box {
+  background: var(--primary-light);
+  color: black;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem auto 0 auto;
+  text-align: center;
+}
+
+.onboarding-summary-box {
+  background: var(--background-alt);
+  padding: 1.5rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 1.1rem;
 }
 
 /* Plan Selection Styles */
@@ -516,6 +539,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  gap: 2rem;
 }
 
 .plan-cards-figma {
@@ -567,7 +593,13 @@
   font-weight: 700;
   margin-bottom: 1.25rem;
   letter-spacing: 0.01em;
+  color: black
 }
+
+.plan-card-header.pro {
+  color: white;
+}
+
 .plan-card-price-row {
   display: flex;
   align-items: flex-end;
@@ -691,9 +723,7 @@
   .onboarding-title {
     font-size: 2rem;
   }
-  .plan-card-header {
-    font-size: 1.15rem;
-  }
+ 
   .plan-card-price {
     font-size: 2rem;
   }
