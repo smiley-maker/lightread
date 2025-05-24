@@ -124,60 +124,47 @@ const Billing = () => {
           <p>Loading your subscription...</p>
         </div>
       ) : (
-        <div className="billing-container">
-          <div className="plan-cards">
-            <div className={`plan-card ${isFreePlan ? 'active' : ''}`}>
-              <h2 className="plan-title">Free</h2>
-              <div className="plan-price">
-                <span className="price">$0</span>
-                <span className="period">/month</span>
-              </div>
-              <ul className="plan-features">
-                <li style={ isFreePlan ? {color: 'white'} : {color: 'black'} }>Summarization of highlighted text</li>
-                <li style={ isFreePlan ? {color: 'white'} : {color: 'black'} }>Up to 10 summaries/day</li>
-                <li style={ isFreePlan ? {color: 'white'} : {color: 'black'} }>Popup display for easy viewing</li>
-                <li style={ isFreePlan ? {color: 'white'} : {color: 'black'} }>Copy to clipboard</li>
-              </ul>
-              <button 
-                className={`plan-button ${isFreePlan ? 'active-plan' : 'select-plan'}`}
-                onClick={() => handlePlanChange('free')}
-                disabled={updating || isFreePlan}
-              >
-                {isFreePlan ? 'Current Plan' : 'Select Plan'}
-              </button>
+        <div className="plan-cards-figma">
+          <div className={`plan-card-figma${isFreePlan ? ' active' : ''}`}> 
+            <div className="plan-card-header">Free</div>
+            <div className="plan-card-price-row">
+              <span className="plan-card-price">$0</span>
+              <span className="plan-card-period">/month</span>
             </div>
-            
-            <div className={`plan-card pro ${isProPlan ? 'active' : ''}`}>
-              <h2 className="plan-title">Pro</h2>
-              <div className="plan-price">
-                <span className="price">$5</span>
-                <span className="period">/month</span>
-              </div>
-              <ul className="plan-features">
-                <li style={ isProPlan ? {color: 'white'} : {color: 'black'} }>Unlimited summaries</li>
-                <li style={ isProPlan ? {color: 'white'} : {color: 'black'} }>Summary history</li>
-                <li style={ isProPlan ? {color: 'white'} : {color: 'black'} }>Adjustable lengths</li>
-                <li style={ isProPlan ? {color: 'white'} : {color: 'black'} }>Tone, style, & difficulty options</li>
-              </ul>
-              <button 
-                className={`plan-button ${isProPlan ? 'active-plan' : 'select-plan'}`}
-                onClick={() => handlePlanChange('pro')}
-                disabled={updating || isProPlan}
-              >
-                {isProPlan ? 'Current Plan' : 'Select Plan'}
-              </button>
-            </div>
+            <ul className="plan-card-features">
+              <li><span className="plan-check">✔</span> Summarization of highlighted text</li>
+              <li><span className="plan-check">✔</span> Up to 10 summaries/day</li>
+              <li><span className="plan-check">✔</span> Popup display for easy viewing</li>
+              <li><span className="plan-check">✔</span> Copy to clipboard</li>
+            </ul>
+            <button 
+              className={`plan-card-btn${isFreePlan ? ' selected' : ''}`}
+              onClick={() => handlePlanChange('free')}
+              disabled={updating || isFreePlan}
+            >
+              {isFreePlan ? 'selected' : 'select plan'}
+            </button>
           </div>
-          
-          {isProPlan && subscription?.end_date && (
-            <div className="payment-info">
-              <h3>Payment Information</h3>
-              <p>Your next payment of $5 will be processed on {new Date(subscription.end_date).toLocaleDateString()}</p>
-              <button className="cancel-subscription" onClick={handleManageSubscription}>
-                Manage Subscription
-              </button>
+          <div className={`plan-card-figma pro${isProPlan ? ' active' : ''}`}> 
+            <div className="plan-card-header pro">Pro</div>
+            <div className="plan-card-price-row">
+              <span className="plan-card-price">$5</span>
+              <span className="plan-card-period">/month</span>
             </div>
-          )}
+            <ul className="plan-card-features">
+              <li><span className="plan-check">✔</span> Unlimited summaries</li>
+              <li><span className="plan-check">✔</span> Summary history</li>
+              <li><span className="plan-check">✔</span> Adjustable lengths</li>
+              <li><span className="plan-check">✔</span> Tone, style, & difficulty options</li>
+            </ul>
+            <button 
+              className={`plan-card-btn${isProPlan ? ' selected' : ''}`}
+              onClick={() => handlePlanChange('pro')}
+              disabled={updating || isProPlan}
+            >
+              {isProPlan ? 'selected' : 'select plan'}
+            </button>
+          </div>
         </div>
       )}
     </div>

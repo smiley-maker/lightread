@@ -306,87 +306,36 @@ const App = () => {
           <ScrollAnimation animationClass="animate-fadeIn">
             <h2 className="section-title">choose your plan!</h2>
           </ScrollAnimation>
-          <div className="pricing-grid">
-            <ScrollAnimation animationClass="animate-fadeInLeft" delay={100}>
-              <div className="pricing-card">
-                <div className="plan-name">Free</div>
-                <div className="plan-price">
-                  <span className="price">$0</span>
-                  <span className="period">/month</span>
-                </div>
-                <ul className="plan-features">
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Text summarization of highlighted text.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Up to 10 summaries/day.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Popup display for easy viewing.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Copy to clipboard.
-                  </li>
-                </ul>
-                <button className="btn btn-chrome" onClick={handleAuthButtonClick}>add to chrome</button>
+          <div className="plan-cards-figma">
+            <div className="plan-card-figma pricing-animate pricing-animate-delay-1">
+              <div className="plan-card-header">Free</div>
+              <div className="plan-card-price-row">
+                <span className="plan-card-price">$0</span>
+                <span className="plan-card-period">/month</span>
               </div>
-            </ScrollAnimation>
-
-            <ScrollAnimation animationClass="animate-fadeInRight" delay={200}>
-              <div className="pricing-card pro">
-                <div className="best-value">best value</div>
-                <div className="plan-name">Pro</div>
-                <div className="plan-price">
-                  <span className="price">$5</span>
-                  <span className="period">/month</span>
-                </div>
-                <ul className="plan-features">
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Unlimited summaries.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Summary history.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Adjustable lengths.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Tone, style, & difficulty options.
-                  </li>
-                  <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    Priority support.
-                  </li>
-                </ul>
-                <button className="btn btn-chrome" onClick={handleAuthButtonClick}>add to chrome</button>
+              <ul className="plan-card-features">
+                <li><span className="plan-check">✔</span> Text summarization of highlighted text.</li>
+                <li><span className="plan-check">✔</span> Up to 10 summaries/day.</li>
+                <li><span className="plan-check">✔</span> Popup display for easy viewing.</li>
+                <li><span className="plan-check">✔</span> Copy to clipboard.</li>
+              </ul>
+              <button className="plan-card-btn" onClick={handleAuthButtonClick}>add to chrome</button>
+            </div>
+            <div className="plan-card-figma pro pricing-animate pricing-animate-delay-2">
+              <div className="plan-card-header pro">Pro</div>
+              <div className="plan-card-price-row">
+                <span className="plan-card-price">$5</span>
+                <span className="plan-card-period">/month</span>
               </div>
-            </ScrollAnimation>
+              <ul className="plan-card-features">
+                <li><span className="plan-check">✔</span> Unlimited summaries.</li>
+                <li><span className="plan-check">✔</span> Summary history.</li>
+                <li><span className="plan-check">✔</span> Adjustable lengths.</li>
+                <li><span className="plan-check">✔</span> Tone, style, & difficulty options.</li>
+                <li><span className="plan-check">✔</span> Priority support.</li>
+              </ul>
+              <button className="plan-card-btn" onClick={handleAuthButtonClick}>add to chrome</button>
+            </div>
           </div>
         </div>
       </section>
@@ -417,7 +366,8 @@ const App = () => {
               <a href="#features" onClick={handleNavLinkClick}>features</a>
               <a href="#privacy" onClick={handleNavLinkClick}>privacy</a>
               <a href="#pricing" onClick={handleNavLinkClick}>pricing</a>
-              <a href="#">terms of use & privacy policy</a>
+              <a href="/terms">terms of use</a>
+              <a href="/privacy">privacy policy</a>
             </div>
           </div>
           <div className="footer-bottom">

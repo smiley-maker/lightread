@@ -658,11 +658,45 @@
   background: #ede7fa;
   color: #7c4dff;
   cursor: pointer;
-  transition: background 0.18s, color 0.18s;
+  transition: background 0.18s, color 0.18s, box-shadow 0.18s, transform 0.18s;
   margin-top: 0.5rem;
   text-transform: lowercase;
   letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(138, 102, 255, 0.04);
 }
+.plan-card-btn:hover:not(:disabled) {
+  background: #d6cfff;
+  color: #4b2dbf;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 18px rgba(124, 77, 255, 0.10);
+}
+
+/* Fade-in-up animation for pricing cards */
+@keyframes pricingFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(32px) scale(0.98);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.pricing-animate {
+  animation: pricingFadeInUp 0.7s cubic-bezier(.33,1.02,.47,.98) both;
+}
+.pricing-animate-delay-1 {
+  animation-delay: 0.12s;
+}
+.pricing-animate-delay-2 {
+  animation-delay: 0.28s;
+}
+
 .plan-card-btn.selected {
   background: #d6cfff;
   color: #3a2d5c;
