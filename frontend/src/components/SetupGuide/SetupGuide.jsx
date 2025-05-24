@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Check, Chrome, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
+import { Check, Chrome, ChevronRight, ChevronLeft, Sparkles, Crown } from 'lucide-react';
+import { createCheckoutSession } from '../../lib/stripe';
 import './SetupGuide.css';
 
 const SetupGuide = ({ onComplete }) => {
@@ -11,7 +12,13 @@ const SetupGuide = ({ onComplete }) => {
   const [isExtensionInstalled, setIsExtensionInstalled] = useState(false);
   const [hasTriedSummary, setHasTriedSummary] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('free');
+  const [updating, setUpdating] = useState(false);
+  const [message, setMessage] = useState({ text: '', type: '' });
   const demoTextRef = useRef(null);
+
+  // Stripe price ID for the Pro plan
+  const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
 
   // Check if extension is installed (simulate)
   useEffect(() => {
@@ -19,13 +26,63 @@ const SetupGuide = ({ onComplete }) => {
     setIsExtensionInstalled(!!isInstalled);
   }, []);
 
+  const handlePlanChange = async (planType) => {
+    if (!user || updating || selectedPlan === planType) return;
+    
+    try {
+      setUpdating(true);
+      
+      if (planType === 'pro') {
+        // For upgrading to pro, use the checkout session
+        localStorage.setItem('userEmail', user.email);
+        try {
+          await createCheckoutSession(STRIPE_PRICE_ID);
+          return; // Exit early as we're redirecting
+        } catch (err) {
+          console.error('Error creating checkout session:', err);
+          setMessage({ 
+            text: 'Failed to initiate payment. Please try again.', 
+            type: 'error' 
+          });
+          return;
+        }
+      }
+      
+      setSelectedPlan(planType);
+      setMessage({ 
+        text: `Successfully selected ${planType} plan!`, 
+        type: 'success' 
+      });
+      
+      setTimeout(() => {
+        setMessage({ text: '', type: '' });
+      }, 3000);
+    } catch (err) {
+      console.error('Error updating subscription:', err);
+      setMessage({ 
+        text: `Failed to update subscription. Please try again.`, 
+        type: 'error' 
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Steps definition
   const steps = [
     {
       id: 1,
+      title: 'Choose Your Plan',
+      description: 'Select the plan that best fits your needs. You can always upgrade later.',
+      icon: <Crown size={32} color="#8A66FF" />,
+      action: null,
+      isComplete: true,
+    },
+    {
+      id: 2,
       title: 'Install the Chrome Extension',
       description: 'Add LightRead to your Chrome browser to start summarizing text instantly.',
-      icon: <Chrome size={32} color="#8A66FF" />, // Higher contrast
+      icon: <Chrome size={32} color="#8A66FF" />,
       action: () => {
         window.open('https://chrome.google.com/webstore/detail/lightread/your-extension-id', '_blank');
         localStorage.setItem('lightread_extension_installed', 'true');
@@ -34,20 +91,20 @@ const SetupGuide = ({ onComplete }) => {
       isComplete: isExtensionInstalled,
     },
     {
-      id: 2,
+      id: 3,
       title: 'Sign In to the Extension',
       description: 'Click the LightRead icon in your Chrome toolbar and sign in with your account. This lets the extension save your summaries and unlocks all features.',
-      icon: <Sparkles size={32} color="#8A66FF" />, // Higher contrast
-      action: null, // No action needed
-      isComplete: true, // Always allow to proceed
+      icon: <Sparkles size={32} color="#8A66FF" />,
+      action: null,
+      isComplete: true,
     },
     {
-      id: 3,
+      id: 4,
       title: 'Try Your First Summary',
       description: 'Highlight the text below, right-click, and select "Summarize with LightRead" to see it in action!',
-      icon: <Check size={32} color="#8A66FF" />, // Higher contrast
+      icon: <Check size={32} color="#8A66FF" />,
       action: null,
-      isComplete: true, // Always allow to finish
+      isComplete: true,
     },
   ];
 
@@ -68,11 +125,9 @@ const SetupGuide = ({ onComplete }) => {
   const handleComplete = async () => {
     setIsLoading(true);
     try {
-      // Call the onComplete prop if provided
       if (onComplete) {
         onComplete();
       } else {
-        // Fallback to navigating to dashboard
         navigate('/dashboard');
       }
     } catch (error) {
@@ -125,7 +180,61 @@ const SetupGuide = ({ onComplete }) => {
             <h2>{currentStepData.title}</h2>
             <div className="step-underline" />
             <p>{currentStepData.description}</p>
+            
             {currentStep === 1 && (
+              <div className="plan-selection">
+                {message.text && (
+                  <div className={`settings-message ${message.type}`}>
+                    {message.text}
+                  </div>
+                )}
+                <div className="plan-cards">
+                  <div className={`plan-card ${selectedPlan === 'free' ? 'active' : ''}`}>
+                    <h2 className="plan-title">Free</h2>
+                    <div className="plan-price">
+                      <span className="price">$0</span>
+                      <span className="period">/month</span>
+                    </div>
+                    <ul className="plan-features">
+                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Summarization of highlighted text</li>
+                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Up to 10 summaries/day</li>
+                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Popup display for easy viewing</li>
+                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Copy to clipboard</li>
+                    </ul>
+                    <button 
+                      className={`plan-button ${selectedPlan === 'free' ? 'active-plan' : 'select-plan'}`}
+                      onClick={() => handlePlanChange('free')}
+                      disabled={updating || selectedPlan === 'free'}
+                    >
+                      {selectedPlan === 'free' ? 'Selected' : 'Select Plan'}
+                    </button>
+                  </div>
+                  
+                  <div className={`plan-card pro ${selectedPlan === 'pro' ? 'active' : ''}`}>
+                    <h2 className="plan-title">Pro</h2>
+                    <div className="plan-price">
+                      <span className="price">$5</span>
+                      <span className="period">/month</span>
+                    </div>
+                    <ul className="plan-features">
+                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Unlimited summaries</li>
+                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Summary history</li>
+                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Adjustable lengths</li>
+                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Tone, style, & difficulty options</li>
+                    </ul>
+                    <button 
+                      className={`plan-button ${selectedPlan === 'pro' ? 'active-plan' : 'select-plan'}`}
+                      onClick={() => handlePlanChange('pro')}
+                      disabled={updating || selectedPlan === 'pro'}
+                    >
+                      {selectedPlan === 'pro' ? 'Selected' : 'Select Plan'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {currentStep === 2 && (
               <div className="extension-install">
                 <button
                   className="btn btn-primary"
@@ -140,7 +249,8 @@ const SetupGuide = ({ onComplete }) => {
                 )}
               </div>
             )}
-            {currentStep === 2 && (
+
+            {currentStep === 3 && (
               <div className="sign-in">
                 <p className="info-message">
                   <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
@@ -148,7 +258,8 @@ const SetupGuide = ({ onComplete }) => {
                 </p>
               </div>
             )}
-            {currentStep === 3 && (
+
+            {currentStep === 4 && (
               <div className="try-summary">
                 <div className="demo-text">
                   <p>Here's some sample text you can try summarizing:</p>

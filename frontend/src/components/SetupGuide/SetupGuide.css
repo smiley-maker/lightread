@@ -267,4 +267,154 @@
   font-size: 0.95rem;
   font-style: italic;
   text-align: center;
+}
+
+/* Plan Selection Styles */
+.plan-selection {
+  width: 100%;
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.plan-cards {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.plan-card {
+  flex: 1;
+  max-width: 350px;
+  padding: 2rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.plan-card.active {
+  border-color: #8A66FF;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 12px rgba(138, 102, 255, 0.2);
+}
+
+.plan-card.pro {
+  background: linear-gradient(135deg, #8A66FF 0%, #6B4DE6 100%);
+  color: white;
+}
+
+.plan-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.plan-price {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.plan-price .price {
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.plan-price .period {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+}
+
+.plan-features li {
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.plan-features li::before {
+  content: "✓";
+  color: #8A66FF;
+  font-weight: bold;
+}
+
+.plan-card.pro .plan-features li::before {
+  color: white;
+}
+
+.plan-button {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.plan-button.select-plan {
+  background: #8A66FF;
+  color: white;
+}
+
+.plan-button.select-plan:hover {
+  background: #7A56EE;
+}
+
+.plan-button.active-plan {
+  background: #E8E0FF;
+  color: #8A66FF;
+  cursor: default;
+}
+
+.plan-card.pro .plan-button.select-plan {
+  background: white;
+  color: #8A66FF;
+}
+
+.plan-card.pro .plan-button.select-plan:hover {
+  background: #F5F5F5;
+}
+
+.plan-card.pro .plan-button.active-plan {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.settings-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.settings-message.success {
+  background: #E8F5E9;
+  color: #2E7D32;
+}
+
+.settings-message.error {
+  background: #FFEBEE;
+  color: #C62828;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .plan-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .plan-card {
+    width: 100%;
+    max-width: 100%;
+  }
 } 
