@@ -417,4 +417,269 @@
     width: 100%;
     max-width: 100%;
   }
+}
+
+/* Figma-inspired Onboarding Styles */
+.onboarding-bg {
+  min-height: 100vh;
+  background: #f6f4fb;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100vw;
+  padding: 0;
+}
+
+.onboarding-flex {
+  display: flex;
+  width: 100vw;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+.onboarding-stepper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rem 2rem 0 2rem;
+  min-width: 120px;
+}
+
+.onboarding-stepper-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.onboarding-stepper-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #a48cff;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+  border: 3px solid #a48cff;
+  transition: background 0.2s, border 0.2s;
+}
+.onboarding-stepper-step.active .onboarding-stepper-circle {
+  background: #7c4dff;
+  border-color: #7c4dff;
+}
+
+.onboarding-stepper-line {
+  width: 4px;
+  height: 48px;
+  background: #e0d7fa;
+  margin-bottom: 0.5rem;
+}
+
+.onboarding-main {
+  flex: 1;
+  padding: 4rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.onboarding-title {
+  font-size: 2.75rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 1rem;
+  color: #181028;
+}
+
+.onboarding-desc {
+  font-size: 1.25rem;
+  color: #6b5c8a;
+  text-align: center;
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+}
+
+.plan-selection-figma {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.plan-cards-figma {
+  display: flex;
+  gap: 2.5rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.plan-card-figma {
+  background: #fff;
+  border: 3px solid #d6cfff;
+  border-radius: 24px;
+  box-shadow: 0 4px 24px rgba(138, 102, 255, 0.07);
+  padding: 2.5rem 2.25rem 2rem 2.25rem;
+  max-width: 370px;
+  min-width: 320px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+.plan-card-figma.active {
+  border: 3px solid #7c4dff;
+  box-shadow: 0 8px 32px rgba(124, 77, 255, 0.13);
+}
+.plan-card-figma.pro {
+  background: linear-gradient(135deg, #a48cff 0%, #7c4dff 100%);
+  color: #fff;
+  border: 3px solid #a48cff;
+}
+.plan-card-figma.pro.active {
+  border: 3px solid #fff;
+  box-shadow: 0 8px 32px rgba(124, 77, 255, 0.18);
+}
+.plan-card-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.01em;
+}
+.plan-card-price-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.plan-card-price {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.plan-card-period {
+  font-size: 1.25rem;
+  color: #a48cff;
+  font-weight: 500;
+}
+.plan-card-figma.pro .plan-card-period {
+  color: #fff;
+  opacity: 0.85;
+}
+.plan-card-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2.25rem 0;
+  width: 100%;
+}
+.plan-card-features li {
+  font-size: 1.15rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  color: #3a2d5c;
+}
+.plan-card-figma.pro .plan-card-features li {
+  color: #fff;
+}
+.plan-check {
+  display: inline-block;
+  font-size: 1.35em;
+  color: #a48cff;
+  margin-right: 0.7em;
+  font-weight: 700;
+}
+.plan-card-figma.pro .plan-check {
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(124,77,255,0.13);
+}
+.plan-card-btn {
+  width: 100%;
+  padding: 1rem 0;
+  border-radius: 999px;
+  border: none;
+  font-size: 1.15rem;
+  font-weight: 700;
+  background: #ede7fa;
+  color: #7c4dff;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  margin-top: 0.5rem;
+  text-transform: lowercase;
+  letter-spacing: 0.01em;
+}
+.plan-card-btn.selected {
+  background: #d6cfff;
+  color: #3a2d5c;
+  cursor: default;
+}
+.plan-card-figma.pro .plan-card-btn {
+  background: #fff;
+  color: #7c4dff;
+}
+.plan-card-figma.pro .plan-card-btn.selected {
+  background: #ede7fa;
+  color: #fff;
+}
+
+@media (max-width: 1100px) {
+  .plan-cards-figma {
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+  }
+  .plan-card-figma {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+}
+@media (max-width: 900px) {
+  .onboarding-flex {
+    flex-direction: column;
+    align-items: center;
+  }
+  .onboarding-stepper {
+    flex-direction: row;
+    min-width: 0;
+    width: 100vw;
+    justify-content: center;
+    padding: 2rem 0 0 0;
+  }
+  .onboarding-stepper-step {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 1.5rem;
+  }
+  .onboarding-stepper-line {
+    width: 48px;
+    height: 4px;
+    margin-bottom: 0;
+    margin-left: 0.5rem;
+  }
+}
+@media (max-width: 600px) {
+  .onboarding-main {
+    padding: 2rem 0 0 0;
+  }
+  .plan-selection-figma {
+    padding: 0 0.5rem;
+  }
+  .onboarding-title {
+    font-size: 2rem;
+  }
+  .plan-card-header {
+    font-size: 1.15rem;
+  }
+  .plan-card-price {
+    font-size: 2rem;
+  }
 } 

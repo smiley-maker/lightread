@@ -151,151 +151,180 @@ const SetupGuide = ({ onComplete }) => {
   const currentStepData = steps[currentStep - 1];
 
   return (
-    <div className="setup-guide">
-      <div className="setup-container">
-        <div className="setup-header">
-          <h1>Welcome to LightRead!</h1>
-          <p>Let's get you set up in just a few steps.</p>
-        </div>
-
-        <div className="setup-progress">
-          {steps.map((step, idx) => (
-            <div
-              key={step.id}
-              className={`progress-step ${step.id === currentStep ? 'active' : ''} ${
-                (currentStep > step.id || (step.id < currentStep && step.isComplete)) ? 'complete' : ''
-              }`}
-            >
-              <div className="step-number">
-                {(currentStep > step.id || (step.id < currentStep && step.isComplete)) ? <Check size={16} /> : step.id}
-              </div>
-              {idx < steps.length - 1 && <div className="step-line" />}
+    <div className="setup-guide onboarding-bg">
+      <div className="onboarding-flex">
+        {/* Vertical Stepper */}
+        <div className="onboarding-stepper">
+          {[1,2,3,4].map((step, idx) => (
+            <div key={step} className={`onboarding-stepper-step${currentStep === step ? ' active' : ''}`}> 
+              <div className="onboarding-stepper-circle">{step}</div>
+              {idx < 3 && <div className="onboarding-stepper-line" />}
             </div>
           ))}
         </div>
-
-        <div className="setup-content">
-          <div className="step-content">
-            <div className="step-icon high-contrast-bg">{currentStepData.icon}</div>
-            <h2>{currentStepData.title}</h2>
-            <div className="step-underline" />
-            <p>{currentStepData.description}</p>
-            
-            {currentStep === 1 && (
-              <div className="plan-selection">
-                {message.text && (
-                  <div className={`settings-message ${message.type}`}>
-                    {message.text}
+        {/* Main Content */}
+        <div className="onboarding-main">
+          {currentStep === 1 && (
+            <div className="plan-selection-figma">
+              <h1 className="onboarding-title">Select a plan</h1>
+              <p className="onboarding-desc">
+                Our free plan offers a great way to get started, but if you want more advanced customizations and a higher daily summary limit, consider signing up for our pro tier!
+              </p>
+              <div className="plan-cards-figma">
+                <div className={`plan-card-figma${selectedPlan === 'free' ? ' active' : ''}`}> 
+                  <div className="plan-card-header">Free</div>
+                  <div className="plan-card-price-row">
+                    <span className="plan-card-price">$0</span>
+                    <span className="plan-card-period">/month</span>
                   </div>
-                )}
-                <div className="plan-cards">
-                  <div className={`plan-card ${selectedPlan === 'free' ? 'active' : ''}`}>
-                    <h2 className="plan-title">Free</h2>
-                    <div className="plan-price">
-                      <span className="price">$0</span>
-                      <span className="period">/month</span>
-                    </div>
-                    <ul className="plan-features">
-                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Summarization of highlighted text</li>
-                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Up to 10 summaries/day</li>
-                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Popup display for easy viewing</li>
-                      <li style={selectedPlan === 'free' ? {color: 'white'} : {color: 'black'}}>Copy to clipboard</li>
-                    </ul>
-                    <button 
-                      className={`plan-button ${selectedPlan === 'free' ? 'active-plan' : 'select-plan'}`}
-                      onClick={() => handlePlanChange('free')}
-                      disabled={updating || selectedPlan === 'free'}
-                    >
-                      {selectedPlan === 'free' ? 'Selected' : 'Select Plan'}
-                    </button>
-                  </div>
-                  
-                  <div className={`plan-card pro ${selectedPlan === 'pro' ? 'active' : ''}`}>
-                    <h2 className="plan-title">Pro</h2>
-                    <div className="plan-price">
-                      <span className="price">$5</span>
-                      <span className="period">/month</span>
-                    </div>
-                    <ul className="plan-features">
-                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Unlimited summaries</li>
-                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Summary history</li>
-                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Adjustable lengths</li>
-                      <li style={selectedPlan === 'pro' ? {color: 'white'} : {color: 'black'}}>Tone, style, & difficulty options</li>
-                    </ul>
-                    <button 
-                      className={`plan-button ${selectedPlan === 'pro' ? 'active-plan' : 'select-plan'}`}
-                      onClick={() => handlePlanChange('pro')}
-                      disabled={updating || selectedPlan === 'pro'}
-                    >
-                      {selectedPlan === 'pro' ? 'Selected' : 'Select Plan'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentStep === 2 && (
-              <div className="extension-install">
-                <button
-                  className="btn btn-primary"
-                  onClick={currentStepData.action}
-                >
-                  Install Extension
-                </button>
-                {isExtensionInstalled && (
-                  <p className="success-message">
-                    <Check size={16} /> Great! The extension is installed.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {currentStep === 3 && (
-              <div className="sign-in">
-                <p className="info-message">
-                  <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
-                  If you don't see it, click the puzzle icon and pin LightRead for easy access!
-                </p>
-              </div>
-            )}
-
-            {currentStep === 4 && (
-              <div className="try-summary">
-                <div className="demo-text">
-                  <p>Here's some sample text you can try summarizing:</p>
-                  <div
-                    className="selectable-text"
-                    ref={demoTextRef}
-                    tabIndex={0}
-                    onClick={handleDemoTextClick}
-                    title="Click to select all text"
-                    style={{ userSelect: 'text' }}
+                  <ul className="plan-card-features">
+                    <li><span className="plan-check">✔</span> Summarization of highlighted text.</li>
+                    <li><span className="plan-check">✔</span> Up to 5 summaries/day.</li>
+                    <li><span className="plan-check">✔</span> Popup display for easy viewing.</li>
+                    <li><span className="plan-check">✔</span> Copy to clipboard.</li>
+                  </ul>
+                  <button 
+                    className={`plan-card-btn${selectedPlan === 'free' ? ' selected' : ''}`}
+                    onClick={() => handlePlanChange('free')}
+                    disabled={updating || selectedPlan === 'free'}
                   >
-                    LightRead is an AI-powered Chrome extension that helps you quickly understand
-                    any text you find online. Simply highlight the text you want to summarize,
-                    right-click, and select "Summarize with LightRead" to get an instant summary.
+                    {selectedPlan === 'free' ? 'selected' : 'select plan'}
+                  </button>
+                </div>
+                <div className={`plan-card-figma pro${selectedPlan === 'pro' ? ' active' : ''}`}> 
+                  <div className="plan-card-header">Pro</div>
+                  <div className="plan-card-price-row">
+                    <span className="plan-card-price">$5</span>
+                    <span className="plan-card-period">/month</span>
                   </div>
-                  <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
+                  <ul className="plan-card-features">
+                    <li><span className="plan-check">✔</span> Unlimited summaries.</li>
+                    <li><span className="plan-check">✔</span> Summary history.</li>
+                    <li><span className="plan-check">✔</span> Adjustable lengths.</li>
+                    <li><span className="plan-check">✔</span> Tone, style, & difficulty options.</li>
+                  </ul>
+                  <button 
+                    className={`plan-card-btn${selectedPlan === 'pro' ? ' selected' : ''}`}
+                    onClick={() => handlePlanChange('pro')}
+                    disabled={updating || selectedPlan === 'pro'}
+                  >
+                    {selectedPlan === 'pro' ? 'selected' : 'select plan'}
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="setup-actions">
-          {currentStep > 1 && (
-            <button className="btn btn-secondary" onClick={handleBack}>
-              <ChevronLeft size={16} /> Back
-            </button>
+            </div>
           )}
-          <button
-            className="btn btn-primary"
-            onClick={currentStep === steps.length ? handleComplete : handleNext}
-            disabled={isLoading}
-          >
-            {currentStep === steps.length ? 'Finish Setup' : 'Next Step'}
-            {currentStep < steps.length && <ChevronRight size={16} />}
-          </button>
+          {currentStep === 2 && (
+            <div className="extension-install">
+              <button
+                className="btn btn-primary"
+                onClick={currentStepData.action}
+              >
+                Install Extension
+              </button>
+              {isExtensionInstalled && (
+                <p className="success-message">
+                  <Check size={16} /> Great! The extension is installed.
+                </p>
+              )}
+            </div>
+          )}
+          {currentStep === 3 && (
+            <div className="sign-in">
+              <p className="info-message">
+                <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
+                If you don't see it, click the puzzle icon and pin LightRead for easy access!
+              </p>
+            </div>
+          )}
+          {currentStep === 4 && (
+            <div className="try-summary">
+              <div className="demo-text">
+                <p>Here's some sample text you can try summarizing:</p>
+                <div
+                  className="selectable-text"
+                  ref={demoTextRef}
+                  tabIndex={0}
+                  onClick={handleDemoTextClick}
+                  title="Click to select all text"
+                  style={{ userSelect: 'text' }}
+                >
+                  LightRead is an AI-powered Chrome extension that helps you quickly understand
+                  any text you find online. Simply highlight the text you want to summarize,
+                  right-click, and select "Summarize with LightRead" to get an instant summary.
+                </div>
+                <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
+              </div>
+            </div>
+          )}
+          {currentStep !== 1 && (
+            <div className="setup-content">
+              <div className="step-content">
+                <div className="step-icon high-contrast-bg">{currentStepData.icon}</div>
+                <h2>{currentStepData.title}</h2>
+                <div className="step-underline" />
+                <p>{currentStepData.description}</p>
+                {currentStep === 2 && (
+                  <div className="extension-install">
+                    <button
+                      className="btn btn-primary"
+                      onClick={currentStepData.action}
+                    >
+                      Install Extension
+                    </button>
+                    {isExtensionInstalled && (
+                      <p className="success-message">
+                        <Check size={16} /> Great! The extension is installed.
+                      </p>
+                    )}
+                  </div>
+                )}
+                {currentStep === 3 && (
+                  <div className="sign-in">
+                    <p className="info-message">
+                      <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
+                      If you don't see it, click the puzzle icon and pin LightRead for easy access!
+                    </p>
+                  </div>
+                )}
+                {currentStep === 4 && (
+                  <div className="try-summary">
+                    <div className="demo-text">
+                      <p>Here's some sample text you can try summarizing:</p>
+                      <div
+                        className="selectable-text"
+                        ref={demoTextRef}
+                        tabIndex={0}
+                        onClick={handleDemoTextClick}
+                        title="Click to select all text"
+                        style={{ userSelect: 'text' }}
+                      >
+                        LightRead is an AI-powered Chrome extension that helps you quickly understand
+                        any text you find online. Simply highlight the text you want to summarize,
+                        right-click, and select "Summarize with LightRead" to get an instant summary.
+                      </div>
+                      <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="setup-actions">
+            {currentStep > 1 && (
+              <button className="btn btn-secondary" onClick={handleBack}>
+                <ChevronLeft size={16} /> Back
+              </button>
+            )}
+            <button
+              className="btn btn-primary"
+              onClick={currentStep === steps.length ? handleComplete : handleNext}
+              disabled={isLoading}
+            >
+              {currentStep === steps.length ? 'Finish Setup' : 'Next Step'}
+              {currentStep < steps.length && <ChevronRight size={16} />}
+            </button>
+          </div>
         </div>
       </div>
     </div>
