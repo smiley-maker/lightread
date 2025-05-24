@@ -30,6 +30,7 @@ const App = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const navigate = useNavigate();
+  const [showLandingLoader, setShowLandingLoader] = useState(true);
 
   // Check if user has completed onboarding
   useEffect(() => {
@@ -70,6 +71,16 @@ const App = () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    // Only show loader on first mount for logged-out users
+    if (!user) {
+      const timer = setTimeout(() => setShowLandingLoader(false), 700); // 700ms feels snappy but noticeable
+      return () => clearTimeout(timer);
+    } else {
+      setShowLandingLoader(false); // If user is logged in, skip loader
+    }
+  }, [user]);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -125,7 +136,7 @@ const App = () => {
     navigate('/dashboard');
   };
 
-  if (loading) {
+  if (loading || showLandingLoader) {
     return (
       <div className="loading-screen">
         <div className="loading-logo">
