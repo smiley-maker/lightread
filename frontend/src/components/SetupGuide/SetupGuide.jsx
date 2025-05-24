@@ -215,98 +215,68 @@ const SetupGuide = ({ onComplete }) => {
             </div>
           )}
           {currentStep === 2 && (
-            <div className="extension-install">
-              <button
-                className="btn btn-primary"
-                onClick={currentStepData.action}
-              >
-                Install Extension
-              </button>
-              {isExtensionInstalled && (
-                <p className="success-message">
-                  <Check size={16} /> Great! The extension is installed.
-                </p>
-              )}
+            <div className="onboarding-step-content">
+              <button className="onboarding-top-btn" onClick={currentStepData.action}>install extension</button>
+              <div className="onboarding-step-icon"><span className="onboarding-icon-chrome">{currentStepData.icon}</span></div>
+              <h2 className="onboarding-step-title">Install the Chrome Extension</h2>
+              <div className="onboarding-step-underline" />
+              <p className="onboarding-step-desc">Add LightRead to your Chrome browser to start summarizing text instantly.</p>
+              <button className="onboarding-main-btn" onClick={currentStepData.action}>install extension</button>
             </div>
           )}
           {currentStep === 3 && (
-            <div className="sign-in">
-              <p className="info-message">
+            <div className="onboarding-step-content">
+              <div className="onboarding-tip-box">
                 <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
                 If you don't see it, click the puzzle icon and pin LightRead for easy access!
-              </p>
-            </div>
-          )}
-          {currentStep === 4 && (
-            <div className="try-summary">
-              <div className="demo-text">
-                <p>Here's some sample text you can try summarizing:</p>
-                <div
-                  className="selectable-text"
-                  ref={demoTextRef}
-                  tabIndex={0}
-                  onClick={handleDemoTextClick}
-                  title="Click to select all text"
-                  style={{ userSelect: 'text' }}
-                >
-                  LightRead is an AI-powered Chrome extension that helps you quickly understand
-                  any text you find online. Simply highlight the text you want to summarize,
-                  right-click, and select "Summarize with LightRead" to get an instant summary.
-                </div>
-                <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
+              </div>
+              <div className="onboarding-step-icon"><span className="onboarding-icon-sparkles">{currentStepData.icon}</span></div>
+              <h2 className="onboarding-step-title">Sign In to the Extension</h2>
+              <div className="onboarding-step-underline" />
+              <p className="onboarding-step-desc">Click the LightRead icon in your Chrome toolbar and sign in with your account. This lets the extension save your summaries and unlocks all features.</p>
+              <div className="onboarding-tip-box">
+                <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
+                If you don't see it, click the puzzle icon and pin LightRead for easy access!
               </div>
             </div>
           )}
-          {currentStep !== 1 && (
-            <div className="setup-content">
-              <div className="step-content">
-                <div className="step-icon high-contrast-bg">{currentStepData.icon}</div>
-                <h2>{currentStepData.title}</h2>
-                <div className="step-underline" />
-                <p>{currentStepData.description}</p>
-                {currentStep === 2 && (
-                  <div className="extension-install">
-                    <button
-                      className="btn btn-primary"
-                      onClick={currentStepData.action}
-                    >
-                      Install Extension
-                    </button>
-                    {isExtensionInstalled && (
-                      <p className="success-message">
-                        <Check size={16} /> Great! The extension is installed.
-                      </p>
-                    )}
+          {currentStep === 4 && (
+            <div className="onboarding-step-content">
+              <div className="onboarding-summary-demo">
+                <div className="onboarding-summary-label">Here's some sample text you can try summarizing:</div>
+                <div className="onboarding-summary-box">
+                  <div
+                    className="onboarding-summary-text"
+                    ref={demoTextRef}
+                    tabIndex={0}
+                    onClick={handleDemoTextClick}
+                    title="Click the box to auto-select all text"
+                    style={{ userSelect: 'text' }}
+                  >
+                    LightRead is an AI-powered Chrome extension that helps you quickly understand any text you find online. Simply highlight the text you want to summarize, right-click, and select "Summarize with LightRead" to get an instant summary.
                   </div>
-                )}
-                {currentStep === 3 && (
-                  <div className="sign-in">
-                    <p className="info-message">
-                      <strong>Tip:</strong> Click the LightRead icon <span role="img" aria-label="puzzle piece">🧩</span> in your Chrome toolbar and sign in with your account.<br />
-                      If you don't see it, click the puzzle icon and pin LightRead for easy access!
-                    </p>
+                </div>
+                <div className="onboarding-summary-tip">Click the box to auto-select all text!</div>
+              </div>
+              <div className="onboarding-step-icon"><span className="onboarding-icon-check">{currentStepData.icon}</span></div>
+              <h2 className="onboarding-step-title">Try Your First Summary</h2>
+              <div className="onboarding-step-underline" />
+              <p className="onboarding-step-desc">Highlight the text below, right-click, and select "Summarize with LightRead" to see it in action!</p>
+              <div className="onboarding-summary-demo">
+                <div className="onboarding-summary-label">Here's some sample text you can try summarizing:</div>
+                <div className="onboarding-summary-box">
+                  <div
+                    className="onboarding-summary-text"
+                    ref={demoTextRef}
+                    tabIndex={0}
+                    onClick={handleDemoTextClick}
+                    title="Click the box to auto-select all text"
+                    style={{ userSelect: 'text' }}
+                  >
+                    LightRead is an AI-powered Chrome extension that helps you quickly understand any text you find online. Simply highlight the text you want to summarize, right-click, and select "Summarize with LightRead" to get an instant summary.
                   </div>
-                )}
-                {currentStep === 4 && (
-                  <div className="try-summary">
-                    <div className="demo-text">
-                      <p>Here's some sample text you can try summarizing:</p>
-                      <div
-                        className="selectable-text"
-                        ref={demoTextRef}
-                        tabIndex={0}
-                        onClick={handleDemoTextClick}
-                        title="Click to select all text"
-                        style={{ userSelect: 'text' }}
-                      >
-                        LightRead is an AI-powered Chrome extension that helps you quickly understand
-                        any text you find online. Simply highlight the text you want to summarize,
-                        right-click, and select "Summarize with LightRead" to get an instant summary.
-                      </div>
-                      <div className="auto-highlight-tip">Click the box to auto-select all text!</div>
-                    </div>
-                  </div>
-                )}
+                </div>
+                <div className="onboarding-summary-tip">Click the box to auto-select all text!</div>
               </div>
             </div>
           )}

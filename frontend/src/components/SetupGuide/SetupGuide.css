@@ -444,6 +444,11 @@
   align-items: center;
   padding: 4rem 2rem 0 2rem;
   min-width: 120px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 2;
+  background: transparent;
 }
 
 .onboarding-stepper-step {
@@ -526,14 +531,24 @@
   border-radius: 24px;
   box-shadow: 0 4px 24px rgba(138, 102, 255, 0.07);
   padding: 2.5rem 2.25rem 2rem 2.25rem;
-  max-width: 370px;
-  min-width: 320px;
-  flex: 1;
+  max-width: 440px;
+  min-width: 340px;
+  flex: 1 1 420px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   transition: border 0.2s, box-shadow 0.2s;
 }
+
+/* Price text black for Free plan */
+.plan-card-figma:not(.pro) .plan-card-price {
+  color: #181028;
+}
+
+.plan-card-figma.pro .plan-card-price {
+  color: #fff;
+}
+
 .plan-card-figma.active {
   border: 3px solid #7c4dff;
   box-shadow: 0 8px 32px rgba(124, 77, 255, 0.13);
