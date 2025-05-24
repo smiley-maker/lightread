@@ -201,6 +201,47 @@
         .plan-limits p {
             margin: 5px 0;
         }
+
+        /* New styles for welcome screen */
+        .welcome-screen {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .welcome-screen h2 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            font-size: 20px;
+        }
+
+        .welcome-screen p {
+            margin-bottom: 24px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-color);
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .auth-buttons button {
+            width: 100%;
+            padding: 12px;
+            font-weight: 500;
+        }
+
+        .auth-buttons button.primary {
+            background-color: var(--primary-color);
+            color: black;
+        }
+
+        .auth-buttons button.secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -210,75 +251,87 @@
             <button class="close-button" id="closeButton">×</button>
         </div>
 
-        <div class="usage-display">
-            <div>Daily Usage</div>
-            <div class="usage-progress">
-                <div class="usage-progress-bar" id="usageProgress" style="width: 0%"></div>
+        <!-- Welcome Screen (shown when not logged in) -->
+        <div id="welcomeScreen" class="welcome-screen">
+            <h2>Welcome to LightRead</h2>
+            <p>Summarize any text on the web with AI. Sign in to get started or create a new account.</p>
+            <div class="auth-buttons">
+                <button id="loginButton" class="primary">Sign In</button>
+                <button id="signupButton" class="secondary">Create Account</button>
             </div>
-            <div id="usageText">0/5 summaries used today</div>
-            <button class="upgrade-button" id="upgradeButton">Upgrade to Premium</button>
         </div>
 
-        <div class="tabs">
-            <div class="tab active" data-tab="settings">Settings</div>
-            <div class="tab" data-tab="auth">Account</div>
-        </div>
+        <!-- Authenticated Content (shown when logged in) -->
+        <div id="authenticatedContent" style="display: none;">
+            <div class="usage-display">
+                <div>Daily Usage</div>
+                <div class="usage-progress">
+                    <div class="usage-progress-bar" id="usageProgress" style="width: 0%"></div>
+                </div>
+                <div id="usageText">0/5 summaries used today</div>
+                <button class="upgrade-button" id="upgradeButton">Upgrade to Premium</button>
+            </div>
 
-        <!-- Settings Tab -->
-        <div id="settings" class="content active">
-            <div class="settings-option">
-                <label for="summaryLength">Preferred Summary Length</label>
-                <select id="summaryLength">
-                </select>
+            <div class="tabs">
+                <div class="tab active" data-tab="settings">Settings</div>
+                <div class="tab" data-tab="auth">Account</div>
             </div>
-            <div class="settings-option">
-                <label for="theme">Theme</label>
-                <select id="theme">
-                </select>
-            </div>
-            <div class="settings-option pro-only" style="display: none;">
-                <label for="summaryTone">Summary Tone</label>
-                <select id="summaryTone">
-                </select>
-            </div>
-            <div class="settings-option pro-only" style="display: none;">
-                <label for="summaryDifficulty">Summary Difficulty</label>
-                <select id="summaryDifficulty">
-                </select>
-            </div>
-            <div class="settings-option">
-                <label for="saveSourceUrl">Save Source URL</label>
-                <select id="saveSourceUrl">
-                    <option value="true">Yes</option>
-                    <option value="false">No</option>
-                </select>
-            </div>
-            <button id="saveSettings">Save Settings</button>
-            <div id="settingsMessage" class="success-message"></div>
-            
 
-        </div>
+            <!-- Settings Tab -->
+            <div id="settings" class="content active">
+                <div class="settings-option">
+                    <label for="summaryLength">Preferred Summary Length</label>
+                    <select id="summaryLength">
+                    </select>
+                </div>
+                <div class="settings-option">
+                    <label for="theme">Theme</label>
+                    <select id="theme">
+                    </select>
+                </div>
+                <div class="settings-option pro-only" style="display: none;">
+                    <label for="summaryTone">Summary Tone</label>
+                    <select id="summaryTone">
+                    </select>
+                </div>
+                <div class="settings-option pro-only" style="display: none;">
+                    <label for="summaryDifficulty">Summary Difficulty</label>
+                    <select id="summaryDifficulty">
+                    </select>
+                </div>
+                <div class="settings-option">
+                    <label for="saveSourceUrl">Save Source URL</label>
+                    <select id="saveSourceUrl">
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                    </select>
+                </div>
+                <button id="saveSettings">Save Settings</button>
+                <div id="settingsMessage" class="success-message"></div>
+            </div>
 
-        <!-- Auth Tab -->
-        <div id="auth" class="content">
-            <div id="loginForm" class="auth-form">
-                <input type="email" id="email" placeholder="Email" required>
-                <input type="password" id="password" placeholder="Password" required>
-                <button id="loginButton">Login</button>
-                <div class="error" id="loginError"></div>
-                <div class="auth-toggle">
-                    Don't have an account? <a id="goToSignup" href="http://localhost:5173" target="_blank" rel="noopener noreferrer">Sign up</a>
+            <!-- Auth Tab -->
+            <div id="auth" class="content">
+                <div id="userInfo">
+                    <p>Logged in as: <span id="userEmail"></span></p>
+                    <p>Plan: <span id="userPlan">Free</span></p>
+                    <div class="plan-limits">
+                        <p>Daily limit: <span id="dailyLimit">5</span> summaries</p>
+                        <p>Max text length: <span id="maxTextLength">10000</span> characters</p>
+                    </div>
+                    <button id="logoutButton">Logout</button>
                 </div>
             </div>
+        </div>
 
-            <div id="userInfo" style="display: none;">
-                <p>Logged in as: <span id="userEmail"></span></p>
-                <p>Plan: <span id="userPlan">Free</span></p>
-                <div class="plan-limits">
-                    <p>Daily limit: <span id="dailyLimit">5</span> summaries</p>
-                    <p>Max text length: <span id="maxTextLength">10000</span> characters</p>
-                </div>
-                <button id="logoutButton">Logout</button>
+        <!-- Login Form (hidden by default, shown when login button is clicked) -->
+        <div id="loginForm" class="auth-form" style="display: none;">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <button id="loginSubmitButton">Login</button>
+            <div class="error" id="loginError"></div>
+            <div class="auth-toggle">
+                Don't have an account? <a id="goToSignup" href="https://lightread.xyz" target="_blank" rel="noopener noreferrer">Sign up</a>
             </div>
         </div>
     </div>

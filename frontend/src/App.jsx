@@ -112,12 +112,13 @@ const App = () => {
   const handlePlanSelectionComplete = (planType) => {
     setSelectedPlan(planType);
     setShowPlanSelection(false);
-    // Redirect to onboarding route
-    navigate('/onboarding');
+    setShowSetupGuide(true); // Show setup guide after plan selection
   };
 
   const handleCloseSetupGuide = () => {
     setShowSetupGuide(false);
+    // After completing setup guide, navigate to dashboard
+    navigate('/dashboard');
   };
 
   const handleDashboardClick = () => {
@@ -142,6 +143,9 @@ const App = () => {
   if (user && !hasCompletedOnboarding) {
     if (showPlanSelection) {
       return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;
+    }
+    if (showSetupGuide) {
+      return <SetupGuide onComplete={handleCloseSetupGuide} />;
     }
     // If user is logged in but hasn't completed onboarding, show plan selection
     return <PlanSelection user={user} onComplete={handlePlanSelectionComplete} />;

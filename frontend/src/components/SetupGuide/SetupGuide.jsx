@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Check, Chrome, ChevronRight, ChevronLeft, Sparkles } from 'lucide-react';
 import './SetupGuide.css';
 
-const SetupGuide = () => {
+const SetupGuide = ({ onComplete }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
@@ -68,7 +68,13 @@ const SetupGuide = () => {
   const handleComplete = async () => {
     setIsLoading(true);
     try {
-      navigate('/dashboard');
+      // Call the onComplete prop if provided
+      if (onComplete) {
+        onComplete();
+      } else {
+        // Fallback to navigating to dashboard
+        navigate('/dashboard');
+      }
     } catch (error) {
       console.error('Error completing setup:', error);
     } finally {

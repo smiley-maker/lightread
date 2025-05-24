@@ -341,6 +341,23 @@ function decodeJwt(token) {
     }
 }
 
+// Show welcome screen or authenticated content based on auth state
+function updateUIForAuthState(isAuthenticated) {
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const authenticatedContent = document.getElementById('authenticatedContent');
+    const loginForm = document.getElementById('loginForm');
+    
+    if (isAuthenticated) {
+        welcomeScreen.style.display = 'none';
+        loginForm.style.display = 'none';
+        authenticatedContent.style.display = 'block';
+    } else {
+        welcomeScreen.style.display = 'block';
+        loginForm.style.display = 'none';
+        authenticatedContent.style.display = 'none';
+    }
+}
+
 // Authentication
 async function checkAuth() {
     const { token, user } = await chrome.storage.local.get(['token', 'user']);
@@ -373,23 +390,31 @@ async function checkAuth() {
             // Refresh failed, clear storage and show login
             await chrome.storage.local.remove(['token', 'user']);
             chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
-            document.getElementById('loginForm').style.display = 'block';
-            document.getElementById('userInfo').style.display = 'none';
+            updateUIForAuthState(false);
             return;
         }
         // Token is valid, show user info
-        document.getElementById('loginForm').style.display = 'none';
-        document.getElementById('userInfo').style.display = 'block';
         document.getElementById('userEmail').textContent = user.email;
+        updateUIForAuthState(true);
         loadUserData();
     } else {
-        document.getElementById('loginForm').style.display = 'block';
-        document.getElementById('userInfo').style.display = 'none';
+        updateUIForAuthState(false);
     }
 }
 
-// Login
-document.getElementById('loginButton').addEventListener('click', async () => {
+// Login button click handler (shows login form)
+document.getElementById('loginButton').addEventListener('click', () => {
+    document.getElementById('welcomeScreen').style.display = 'none';
+    document.getElementById('loginForm').style.display = 'block';
+});
+
+// Signup button click handler (redirects to landing page)
+document.getElementById('signupButton').addEventListener('click', () => {
+    chrome.tabs.create({ url: "https://lightread.xyz" });
+});
+
+// Login form submission
+document.getElementById('loginSubmitButton').addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const loginError = document.getElementById('loginError');
@@ -401,8 +426,8 @@ document.getElementById('loginButton').addEventListener('click', async () => {
     }
 
     try {
-        document.getElementById('loginButton').disabled = true;
-        document.getElementById('loginButton').textContent = 'Logging in...';
+        document.getElementById('loginSubmitButton').disabled = true;
+        document.getElementById('loginSubmitButton').textContent = 'Logging in...';
         
         const response = await fetch(`${SERVER_URL}/auth/login`, {
             method: 'POST',
@@ -436,8 +461,8 @@ document.getElementById('loginButton').addEventListener('click', async () => {
     } catch (error) {
         loginError.textContent = error.message || 'Login failed. Please try again.';
     } finally {
-        document.getElementById('loginButton').disabled = false;
-        document.getElementById('loginButton').textContent = 'Login';
+        document.getElementById('loginSubmitButton').disabled = false;
+        document.getElementById('loginSubmitButton').textContent = 'Login';
     }
 });
 
@@ -469,7 +494,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const signupLink = document.getElementById("goToSignup");
     if (signupLink) {
         signupLink.addEventListener("click", function(event) {
-            chrome.tabs.create({ url: "http://localhost:5173" });
+            chrome.tabs.create({ url: "https://lightread.xyz" });
         });
     }
 
