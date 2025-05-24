@@ -117,7 +117,7 @@ const App = () => {
 
   const handleCloseSetupGuide = () => {
     setShowSetupGuide(false);
-    // After completing setup guide, navigate to dashboard
+    // After completing setup guide, navigate to onboarding
     navigate('/dashboard');
   };
 

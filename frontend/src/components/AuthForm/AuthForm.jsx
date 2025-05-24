@@ -58,13 +58,13 @@ const AuthForm = ({ onSuccess }) => {
         result = await signup(email, password);
         
         if (!result.error) {
-          // For signup, store the email and redirect to the dashboard with billing tab
+          // For signup, store the email and redirect to onboarding
           localStorage.setItem('userEmail', email);
-          console.log('Successfully signed up, redirecting to dashboard billing tab');
+          console.log('Successfully signed up, redirecting to onboarding');
           
           // Adding a small delay to ensure the user is fully created before redirecting
           setTimeout(() => {
-            navigate('/dashboard?tab=billing');
+            navigate('/onboarding');
           }, 500);
           
           return;
