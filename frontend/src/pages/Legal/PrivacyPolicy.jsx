@@ -39,7 +39,7 @@ const PrivacyPolicy = () => {
           <h3>Optional Information</h3>
           <ul>
             <li>Saved summaries (only if you choose to save them)</li>
-            <li>URLs of pages where summaries were generated (only if you save the summary)</li>
+            <li>URLs of pages where summaries were generated (only if you save the summary and have enabled link saving)</li>
           </ul>
         </section>
 
@@ -70,7 +70,7 @@ const PrivacyPolicy = () => {
           <p>If you choose to save a summary:</p>
           <ul>
             <li>Only the generated summary is stored in our database</li>
-            <li>The source URL is stored for reference</li>
+            <li>The source URL is stored for reference if desired (only if you have enabled link saving)</li>
             <li>You can delete saved summaries at any time</li>
           </ul>
         </section>
@@ -119,7 +119,7 @@ const PrivacyPolicy = () => {
           <ul>
             <li>Account information: Until you delete your account</li>
             <li>Saved summaries: Until you delete them or your account</li>
-            <li>Usage statistics: Up to 12 months</li>
+            <li>Usage statistics: Up to 2 months</li>
             <li>Payment information: As required by law</li>
           </ul>
         </section>
@@ -136,7 +136,7 @@ const PrivacyPolicy = () => {
 
         <section>
           <h2>12. Contact Us</h2>
-          <p>If you have questions about our Privacy Policy or your data, please contact us at privacy@lightread.app</p>
+          <p>If you have questions about our Privacy Policy or your data, please contact us at jrscolorado15@gmail.com</p>
         </section>
 
         <div className="legal-footer">
