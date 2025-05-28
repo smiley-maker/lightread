@@ -84,7 +84,7 @@ const SetupGuide = ({ onComplete }) => {
       description: 'Add LightRead to your Chrome browser to start summarizing text instantly.',
       icon: <Chrome size={32} color="#8A66FF" />,
       action: () => {
-        window.open('https://chrome.google.com/webstore/detail/lightread/your-extension-id', '_blank');
+        window.open('https://chromewebstore.google.com/detail/lightread/mhkflpafikcopieaocdnkdjglgjjkbko?authuser=0&hl=en', '_blank');
         localStorage.setItem('lightread_extension_installed', 'true');
         setIsExtensionInstalled(true);
       },

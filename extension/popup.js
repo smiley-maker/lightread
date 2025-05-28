@@ -304,8 +304,7 @@ document.getElementById('saveSettings').addEventListener('click', async () => {
 
 // Upgrade button
 document.getElementById('upgradeButton').addEventListener('click', () => {
-    // TODO: Replace with actual landing page URL
-    window.open('https://lightread.app/upgrade', '_blank');
+    window.open('https://www.lightread.xyz/dashboard/billing', '_blank');
 });
 
 // Theme change listener
