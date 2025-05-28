@@ -12,8 +12,10 @@ const getSupabase = () => {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
-        autoRefreshToken: true, 
-        storageKey: 'lightread-auth'
+        autoRefreshToken: true,
+        storageKey: 'lightread-auth',
+        detectSessionInUrl: true,
+        flowType: 'pkce'
       }
     });
   }
@@ -27,7 +29,10 @@ export const signUp = async (email, password) => {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
-      password
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/verify-email`
+      }
     });
     
     if (error) {

@@ -17,6 +17,7 @@ import Settings from './pages/Dashboard/Settings.jsx'
 import Billing from './pages/Dashboard/Billing.jsx'
 import Feedback from './pages/Dashboard/Feedback.jsx'
 import SetupGuide from './components/SetupGuide/SetupGuide.jsx'
+import EmailVerification from './pages/EmailVerification.jsx'
 
 /**
  * Router configuration for the application.
@@ -32,6 +33,7 @@ import SetupGuide from './components/SetupGuide/SetupGuide.jsx'
  *   - /feedback: Feedback form
  * - /terms: Terms of Service
  * - /privacy: Privacy Policy
+ * - /verify-email: Email verification page
  */
 const router = createBrowserRouter([
   {
@@ -41,6 +43,10 @@ const router = createBrowserRouter([
   {
     path: '/onboarding',
     element: <SetupGuide />,
+  },
+  {
+    path: '/verify-email',
+    element: <EmailVerification />,
   },
   {
     path: '/dashboard',
