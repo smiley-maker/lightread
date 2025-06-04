@@ -42,14 +42,32 @@ function isRateLimited(action) {
   return false;
 }
 
-// Load auth state from storage
-chrome.storage.local.get(['token', 'user'], (result) => {
-  if (result.token && result.user) {
+// Load auth state from storage and keep it in sync
+async function loadAuthState() {
+  const { token, user } = await chrome.storage.local.get(['token', 'user']);
+  if (token && user) {
     authState = {
       isLoggedIn: true,
-      token: result.token,
-      user: result.user
+      token: token,
+      user: user
     };
+  } else {
+    authState = {
+      isLoggedIn: false,
+      token: null,
+      user: null
+    };
+  }
+  return authState;
+}
+
+// Initialize auth state
+loadAuthState();
+
+// Listen for storage changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && (changes.token || changes.user)) {
+    loadAuthState();
   }
 });
 
@@ -86,6 +104,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Indicates we'll respond asynchronously
   } else if (request.type === 'REFRESH_USAGE') {
     // We don't need to do anything here, just acknowledge
+    sendResponse({ success: true });
+  } else if (request.type === 'SESSION_UPDATE') {
+    // Store the session and token in extension storage
+    chrome.storage.session.set({
+      session: request.session,
+      jwtToken: request.jwtToken
+    });
+    
+    // Also update the authState for immediate use
+    if (request.jwtToken) {
+      authState = {
+        isLoggedIn: true,
+        token: request.jwtToken,
+        user: request.session
+      };
+    }
+    
+    sendResponse({ success: true });
+  } else if (request.type === 'SESSION_CLEAR') {
+    // Clear extension storage
+    chrome.storage.session.clear();
+    
+    // Clear authState
+    authState = {
+      isLoggedIn: false,
+      token: null,
+      user: null
+    };
+    
     sendResponse({ success: true });
   }
   
@@ -271,12 +318,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Function to refresh the auth token
 async function refreshToken() {
   try {
+    if (!authState.token) return false;
+    
     const response = await fetch(`${SERVER_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authState.token}`
       },
-      // Add CORS mode to allow for better error handling
       mode: 'cors',
       credentials: 'same-origin'
     });
@@ -292,6 +340,13 @@ async function refreshToken() {
     const data = await response.json();
     authState.token = data.token;
     await chrome.storage.local.set({ token: data.token });
+    
+    // Notify all popups of the token refresh
+    chrome.runtime.sendMessage({ 
+      type: 'TOKEN_REFRESHED',
+      token: data.token
+    });
+    
     return true;
   } catch (error) {
     console.error('Error refreshing token:', error);
@@ -1032,24 +1087,24 @@ function showErrorPopup(errorMessage) {
     max-width: 400px;
     width: 90%;
   `;
-
-  const message = document.createElement('div');
-  message.textContent = errorMessage;
-  message.style.cssText = 'color: #c62828; margin-bottom: 12px;';
-
+  const errorText = document.createElement('p');
+  errorText.textContent = errorMessage;
+  errorText.style.cssText = 'margin-bottom: 16px;';
+  popup.appendChild(errorText);
   const closeButton = document.createElement('button');
   closeButton.textContent = 'Close';
   closeButton.style.cssText = `
-    background-color: #c62828;
-    color: white;
+    background: none;
     border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
+    color: var(--text-color, #333);
+    font-size: 14px;
     cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 4px;
   `;
-  closeButton.onclick = () => popup.remove();
-
-  popup.appendChild(message);
+  closeButton.onclick = () => {
+    popup.remove();
+  };
   popup.appendChild(closeButton);
   document.body.appendChild(popup);
 }
@@ -1066,39 +1121,3 @@ function updateTheme(theme) {
     if (logo) logo.src = chrome.runtime.getURL('logo.png');
   }
 }
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'SESSION_UPDATE') {
-    // Store the session and token in extension storage
-    chrome.storage.session.set({
-      session: message.session,
-      jwtToken: message.jwtToken
-    });
-    
-    // Also update the authState for immediate use
-    if (message.jwtToken) {
-      authState = {
-        isLoggedIn: true,
-        token: message.jwtToken,
-        user: message.session
-      };
-    }
-    
-    sendResponse({ success: true });
-  } else if (message.type === 'SESSION_CLEAR') {
-    // Clear extension storage
-    chrome.storage.session.clear();
-    
-    // Clear authState
-    authState = {
-      isLoggedIn: false,
-      token: null,
-      user: null
-    };
-    
-    sendResponse({ success: true });
-  }
-  
-  // Allow async response
-  return true;
-});

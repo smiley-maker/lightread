@@ -149,105 +149,94 @@ async function fetchDropdownOptions(token) {
     }
 }
 
-// Load user settings and usage
-async function loadUserData() {
-    try {
-        const { token } = await chrome.storage.local.get('token');
-        if (!token) return;
+// Cache for user data
+let userDataCache = {
+  data: null,
+  timestamp: null,
+  maxAge: 5 * 60 * 1000 // 5 minutes
+};
 
-        // Load settings
-        const settings = await fetchWithAuth('/user/settings');
-        
-        // Load dropdown options
-        const options = await fetchDropdownOptions(token);
-        if (options) {
-            // Populate summary length options from enum
-            const summaryLengthSelect = document.getElementById('summaryLength');
-            summaryLengthSelect.innerHTML = options.summary_length.map(length => 
-                `<option value="${length}">${length}</option>`
-            ).join('');
-            summaryLengthSelect.value = settings.preferred_summary_length;
-
-            // Populate theme options from enum
-            const themeSelect = document.getElementById('theme');
-            themeSelect.innerHTML = options.theme_type.map(theme => 
-                `<option value="${theme}">${theme.charAt(0).toUpperCase() + theme.slice(1)}</option>`
-            ).join('');
-            themeSelect.value = settings.theme;
-
-            // Populate summary tone options from enum
-            const summaryToneSelect = document.getElementById('summaryTone');
-            summaryToneSelect.innerHTML = options.summary_tone.map(tone => 
-                `<option value="${tone}">${tone.charAt(0).toUpperCase() + tone.slice(1)}</option>`
-            ).join('');
-            summaryToneSelect.value = settings.summary_tone;
-
-            // Populate summary difficulty options from enum
-            const summaryDifficultySelect = document.getElementById('summaryDifficulty');
-            summaryDifficultySelect.innerHTML = options.summary_difficulty.map(difficulty => 
-                `<option value="${difficulty}">${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}</option>`
-            ).join('');
-            summaryDifficultySelect.value = settings.summary_difficulty;
-
-            // Set save source URL setting
-            const saveSourceUrlSelect = document.getElementById('saveSourceUrl');
-            saveSourceUrlSelect.value = settings.save_source_url ? 'true' : 'false';
-
-            applyTheme(settings.theme);
-        }
-
-        // Load user limits (includes plan type)
-        const limits = await fetchWithAuth('/user/limits');
-        
-        console.log('Received limits:', limits); // Debug log
-        
-        // Store the plan type and daily limit for later use
-        window.userPlan = {
-            type: limits?.plan_type || 'free',
-            dailyLimit: limits?.daily_summaries || 5,
-            maxTextLength: limits?.max_text_length || 10000
-        };
-        
-        // Update plan text in account tab with null check
-        const planType = limits?.plan_type || 'free';
-        document.getElementById('userPlan').textContent = planType.charAt(0).toUpperCase() + planType.slice(1);
-        
-        // Update plan limits display with null checks
-        document.getElementById('dailyLimit').textContent = limits?.daily_summaries || 5;
-        document.getElementById('maxTextLength').textContent = (limits?.max_text_length || 10000).toLocaleString();
-        
-        // Show/hide pro-only settings and upgrade button
-        const proOnlyElements = document.querySelectorAll('.pro-only');
-        const upgradeButton = document.getElementById('upgradeButton');
-        if (planType === 'pro') {
-            proOnlyElements.forEach(el => {
-                el.style.display = 'block';
-                // Enable all selects inside pro-only elements
-                el.querySelectorAll('select').forEach(sel => sel.disabled = false);
-            });
-            upgradeButton.style.display = 'none';
-        } else {
-            proOnlyElements.forEach(el => {
-                el.style.display = 'none';
-                // Disable all selects inside pro-only elements
-                el.querySelectorAll('select').forEach(sel => sel.disabled = true);
-            });
-            upgradeButton.style.display = 'block';
-        }
-        // Ensure all non-pro-only selects are enabled for free users
-        document.querySelectorAll('.settings-option:not(.pro-only) select').forEach(sel => sel.disabled = false);
-
-        // Load usage
-        const usage = await fetchWithAuth('/user/usage');
-        
-        const dailyLimit = window.userPlan?.dailyLimit || 5; // Fallback to 5 if not loaded
-        const progress = (usage.summaries_count / dailyLimit) * 100;
-        document.getElementById('usageProgress').style.width = `${progress}%`;
-        document.getElementById('usageText').textContent = `${usage.summaries_count}/${dailyLimit} summaries used today`;
-    } catch (error) {
-        console.error('Error loading user data:', error);
+// Function to get user data with caching
+async function getUserData(forceRefresh = false) {
+  const now = Date.now();
+  
+  // Return cached data if it's still valid and not forcing refresh
+  if (!forceRefresh && userDataCache.data && userDataCache.timestamp && 
+      (now - userDataCache.timestamp) < userDataCache.maxAge) {
+    return userDataCache.data;
+  }
+  
+  try {
+    const response = await fetch(`${SERVER_URL}/api/user`, {
+      headers: {
+        'Authorization': `Bearer ${authState.token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user data: ${response.status}`);
     }
+    
+    const data = await response.json();
+    
+    // Update cache
+    userDataCache = {
+      data: data,
+      timestamp: now
+    };
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching user data:', error);
+    // Return cached data if available, even if expired
+    if (userDataCache.data) {
+      return userDataCache.data;
+    }
+    throw error;
+  }
 }
+
+// Function to update UI with user data
+async function updateUI() {
+  try {
+    const userData = await getUserData();
+    
+    // Update plan information
+    const planElement = document.getElementById('plan-info');
+    if (planElement) {
+      planElement.textContent = `Current Plan: ${userData.plan || 'Free'}`;
+    }
+    
+    // Update preferences
+    const preferences = userData.settings?.preferences || {};
+    updateTheme(preferences.theme || 'system');
+    
+    // Update summary limits
+    const limitsElement = document.getElementById('summary-limits');
+    if (limitsElement) {
+      const used = userData.summaries_today || 0;
+      const limit = userData.daily_summary_limit || 5;
+      limitsElement.textContent = `Summaries Today: ${used}/${limit}`;
+    }
+    
+  } catch (error) {
+    console.error('Error updating UI:', error);
+    showError('Failed to load user data. Please try again.');
+  }
+}
+
+// Listen for token refresh events
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'TOKEN_REFRESHED') {
+    // Force refresh user data when token is refreshed
+    updateUI(true);
+  }
+});
+
+// Initialize popup
+document.addEventListener('DOMContentLoaded', () => {
+  updateUI();
+});
 
 // Save settings
 document.getElementById('saveSettings').addEventListener('click', async () => {
@@ -395,7 +384,7 @@ async function checkAuth() {
         // Token is valid, show user info
         document.getElementById('userEmail').textContent = user.email;
         updateUIForAuthState(true);
-        loadUserData();
+        updateUI();
     } else {
         updateUIForAuthState(false);
     }
@@ -503,7 +492,7 @@ document.addEventListener("DOMContentLoaded", function() {
 // Listen for refresh usage message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'REFRESH_USAGE') {
-    loadUserData();
+    updateUI(true);
   }
 });
 

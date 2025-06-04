@@ -2,6 +2,10 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
+  "redirects": [
+    { "source": "http://lightread.xyz", "destination": "https://lightread.xyz", "permanent": true },
+    { "source": "http://www.lightread.xyz", "destination": "https://lightread.xyz", "permanent": true }
+  ],
   "headers": [
     {
       "source": "/(.*)",
