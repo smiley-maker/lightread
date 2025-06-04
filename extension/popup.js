@@ -4,6 +4,26 @@ import config from './config.js';
 // Use the SERVER_URL from config
 const SERVER_URL = config.SERVER_URL;
 
+// Auth state management
+let authState = {
+  isLoggedIn: false,
+  token: null,
+  user: null
+};
+
+// Helper function to show error messages
+function showError(message) {
+  const errorElement = document.getElementById('errorMessage');
+  if (errorElement) {
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      errorElement.style.display = 'none';
+    }, 5000);
+  }
+}
+
 // Helper function for fetch requests with proper CORS and error handling
 async function fetchWithAuth(endpoint, options = {}) {
   const { token } = await chrome.storage.local.get('token');
@@ -114,39 +134,52 @@ document.getElementById('closeButton').addEventListener('click', () => {
 });
 
 // Function to fetch dropdown options
-async function fetchDropdownOptions(token) {
-    try {
-        // Get enum values from Supabase
-        const enumData = await fetchWithAuth('/rpc/get_enum_values', {
-            method: 'POST'
-        });
-        
-        // Process the enum values into our options format
-        const options = {
-            summary_length: [],
-            theme_type: [],
-            summary_tone: [],
-            summary_difficulty: []
-        };
-
-        // Map the enum data to our options
-        enumData.forEach(item => {
-            if (item.enum_name === 'summary_length') {
-                options.summary_length = item.enum_values;
-            } else if (item.enum_name === 'theme_type') {
-                options.theme_type = item.enum_values;
-            } else if (item.enum_name === 'summary_tone') {
-                options.summary_tone = item.enum_values;
-            } else if (item.enum_name === 'summary_difficulty') {
-                options.summary_difficulty = item.enum_values;
-            }
-        });
-
-        return options;
-    } catch (error) {
-        console.error('Error fetching dropdown options:', error);
-        return null;
+async function fetchDropdownOptions() {
+  try {
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) {
+      throw new Error('No authentication token found');
     }
+
+    const response = await fetch(`${SERVER_URL}/rpc/get_enum_values`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch dropdown options: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Process the enum values into our options format
+    const options = {
+      summary_length: [],
+      summary_tone: [],
+      summary_difficulty: []
+    };
+
+    // Map the enum data to our options
+    data.forEach(item => {
+      if (item.enum_name === 'summary_length') {
+        options.summary_length = item.enum_values;
+      } else if (item.enum_name === 'summary_tone') {
+        options.summary_tone = item.enum_values;
+      } else if (item.enum_name === 'summary_difficulty') {
+        options.summary_difficulty = item.enum_values;
+      }
+    });
+
+    return options;
+  } catch (error) {
+    console.error('Error fetching dropdown options:', error);
+    return null;
+  }
 }
 
 // Cache for user data
@@ -163,29 +196,80 @@ async function getUserData(forceRefresh = false) {
   // Return cached data if it's still valid and not forcing refresh
   if (!forceRefresh && userDataCache.data && userDataCache.timestamp && 
       (now - userDataCache.timestamp) < userDataCache.maxAge) {
+    console.log('Returning cached user data:', userDataCache.data);
     return userDataCache.data;
   }
   
   try {
-    const response = await fetch(`${SERVER_URL}/api/user`, {
+    const { token } = await chrome.storage.local.get('token');
+    console.log('Token found:', !!token);
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // First get user limits
+    const limitsResponse = await fetch(`${SERVER_URL}/user/limits`, {
       headers: {
-        'Authorization': `Bearer ${authState.token}`
-      }
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
     });
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch user data: ${response.status}`);
+    if (!limitsResponse.ok) {
+      throw new Error(`Failed to fetch user limits: ${limitsResponse.status}`);
     }
     
-    const data = await response.json();
+    const limitsData = await limitsResponse.json();
+    console.log('Limits data:', limitsData);
+
+    // Then get user settings
+    const settingsResponse = await fetch(`${SERVER_URL}/user/settings`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
+    });
+
+    if (!settingsResponse.ok) {
+      throw new Error(`Failed to fetch user settings: ${settingsResponse.status}`);
+    }
+
+    const settingsData = await settingsResponse.json();
+    console.log('Settings data:', settingsData);
+
+    // Get today's usage
+    const usageResponse = await fetch(`${SERVER_URL}/user/usage`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
+    });
+
+    if (!usageResponse.ok) {
+      throw new Error(`Failed to fetch user usage: ${usageResponse.status}`);
+    }
+
+    const usageData = await usageResponse.json();
+    console.log('Usage data:', usageData);
+    
+    // Combine all data
+    const combinedData = {
+      ...limitsData,
+      settings: settingsData,
+      usage: usageData
+    };
     
     // Update cache
     userDataCache = {
-      data: data,
+      data: combinedData,
       timestamp: now
     };
     
-    return data;
+    return combinedData;
   } catch (error) {
     console.error('Error fetching user data:', error);
     // Return cached data if available, even if expired
@@ -199,25 +283,125 @@ async function getUserData(forceRefresh = false) {
 // Function to update UI with user data
 async function updateUI() {
   try {
+    console.log('Updating UI...');
     const userData = await getUserData();
+    console.log('User data received:', userData);
     
     // Update plan information
-    const planElement = document.getElementById('plan-info');
-    if (planElement) {
-      planElement.textContent = `Current Plan: ${userData.plan || 'Free'}`;
+    const userPlanElement = document.getElementById('userPlan');
+    if (userPlanElement) {
+      const planType = userData.plan_type || 'Free';
+      userPlanElement.textContent = planType;
+      console.log('Updated plan info:', planType);
     }
     
-    // Update preferences
-    const preferences = userData.settings?.preferences || {};
-    updateTheme(preferences.theme || 'system');
-    
-    // Update summary limits
-    const limitsElement = document.getElementById('summary-limits');
-    if (limitsElement) {
-      const used = userData.summaries_today || 0;
-      const limit = userData.daily_summary_limit || 5;
-      limitsElement.textContent = `Summaries Today: ${used}/${limit}`;
+    // Update daily limit
+    const dailyLimitElement = document.getElementById('dailyLimit');
+    if (dailyLimitElement) {
+      const limit = userData.daily_summaries || 5;
+      dailyLimitElement.textContent = limit;
+      console.log('Updated daily limit:', limit);
     }
+
+    // Update max text length
+    const maxTextLengthElement = document.getElementById('maxTextLength');
+    if (maxTextLengthElement) {
+      const maxLength = userData.max_text_length || 10000;
+      maxTextLengthElement.textContent = maxLength;
+      console.log('Updated max text length:', maxLength);
+    }
+
+    // Update usage display
+    const usageTextElement = document.getElementById('usageText');
+    const usageProgressElement = document.getElementById('usageProgress');
+    if (usageTextElement && usageProgressElement) {
+      const used = userData.usage?.summaries_count || 0;
+      const limit = userData.daily_summaries || 5;
+      const percentage = Math.min((used / limit) * 100, 100);
+      
+      usageTextElement.textContent = `${used}/${limit} summaries used today`;
+      usageProgressElement.style.width = `${percentage}%`;
+      console.log('Updated usage:', { used, limit, percentage });
+    }
+
+    // Update settings dropdowns
+    if (userData.settings) {
+      // Get available options
+      const options = await fetchDropdownOptions();
+      console.log('Dropdown options:', options);
+
+      // Update summary length dropdown
+      const summaryLengthSelect = document.getElementById('summaryLength');
+      if (summaryLengthSelect && options?.summary_length) {
+        summaryLengthSelect.innerHTML = '';
+        options.summary_length.forEach(length => {
+          const option = document.createElement('option');
+          option.value = length;
+          option.textContent = length;
+          if (length === userData.settings.preferred_summary_length) {
+            option.selected = true;
+          }
+          summaryLengthSelect.appendChild(option);
+        });
+      }
+
+      // Update theme dropdown
+      const themeSelect = document.getElementById('theme');
+      if (themeSelect) {
+        themeSelect.innerHTML = `
+          <option value="light" ${userData.settings.theme === 'light' ? 'selected' : ''}>Light</option>
+          <option value="dark" ${userData.settings.theme === 'dark' ? 'selected' : ''}>Dark</option>
+          <option value="system" ${userData.settings.theme === 'system' ? 'selected' : ''}>System</option>
+        `;
+      }
+
+      // Update summary tone dropdown (pro only)
+      const summaryToneSelect = document.getElementById('summaryTone');
+      if (summaryToneSelect && options?.summary_tone) {
+        summaryToneSelect.innerHTML = '';
+        options.summary_tone.forEach(tone => {
+          const option = document.createElement('option');
+          option.value = tone;
+          option.textContent = tone.charAt(0).toUpperCase() + tone.slice(1);
+          if (tone === userData.settings.summary_tone) {
+            option.selected = true;
+          }
+          summaryToneSelect.appendChild(option);
+        });
+      }
+
+      // Update summary difficulty dropdown (pro only)
+      const summaryDifficultySelect = document.getElementById('summaryDifficulty');
+      if (summaryDifficultySelect && options?.summary_difficulty) {
+        summaryDifficultySelect.innerHTML = '';
+        options.summary_difficulty.forEach(difficulty => {
+          const option = document.createElement('option');
+          option.value = difficulty;
+          option.textContent = difficulty;
+          if (difficulty === userData.settings.summary_difficulty) {
+            option.selected = true;
+          }
+          summaryDifficultySelect.appendChild(option);
+        });
+      }
+
+      // Update save source URL dropdown
+      const saveSourceUrlSelect = document.getElementById('saveSourceUrl');
+      if (saveSourceUrlSelect) {
+        saveSourceUrlSelect.value = userData.settings.save_source_url ? 'true' : 'false';
+      }
+
+      // Apply theme
+      applyTheme(userData.settings.theme);
+      console.log('Updated theme:', userData.settings.theme);
+    }
+
+    // Show/hide pro-only settings
+    const proOnlyElements = document.querySelectorAll('.pro-only');
+    const isPro = userData.plan_type === 'pro' || userData.plan_type === 'enterprise';
+    proOnlyElements.forEach(element => {
+      element.style.display = isPro ? 'block' : 'none';
+    });
     
   } catch (error) {
     console.error('Error updating UI:', error);

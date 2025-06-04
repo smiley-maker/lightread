@@ -53,7 +53,7 @@ if not gemini_api_key:
 else:
     try:
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')  # Using gemini-pro instead of gemini-2.0-flash
+        model = genai.GenerativeModel('models/gemini-1.5-flash-latest')  # Updated to Gemini 1.5 Flash
         print("Successfully initialized Gemini API")
     except Exception as e:
         print(f"Error configuring Gemini API: {e}")
@@ -297,7 +297,21 @@ def get_authenticated_supabase(token):
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def initialize_gemini():
     try:
-        return genai.GenerativeModel('gemini-pro')
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables")
+            
+        # Ensure API is configured
+        genai.configure(api_key=gemini_api_key)
+        
+        # Initialize model
+        model = genai.GenerativeModel('models/gemini-1.5-flash-latest')  # Updated to Gemini 1.5 Flash
+        
+        # Test the model with a simple prompt
+        response = model.generate_content("Test connection")
+        if not response or not response.text:
+            raise Exception("Failed to get response from Gemini API")
+            
+        return model
     except Exception as e:
         print(f"Error initializing Gemini: {str(e)}")
         raise
@@ -305,6 +319,7 @@ def initialize_gemini():
 # Initialize Gemini model
 try:
     model = initialize_gemini()
+    print("Successfully initialized Gemini model with test connection")
 except Exception as e:
     print(f"Failed to initialize Gemini after retries: {str(e)}")
     model = None
