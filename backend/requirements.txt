@@ -6,3 +6,4 @@ supabase
 stripe
 python-jose[cryptography]
 gunicorn
+tenacity

@@ -16,6 +16,8 @@ from config import (
     STRIPE_WEBHOOK_SECRET,
     GEMINI_API_KEY
 )
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 load_dotenv()
@@ -291,6 +293,22 @@ def get_authenticated_supabase(token):
     client.postgrest.auth(token)
     return client
 
+# Initialize Gemini API with retry logic
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def initialize_gemini():
+    try:
+        return genai.GenerativeModel('gemini-pro')
+    except Exception as e:
+        print(f"Error initializing Gemini: {str(e)}")
+        raise
+
+# Initialize Gemini model
+try:
+    model = initialize_gemini()
+except Exception as e:
+    print(f"Failed to initialize Gemini after retries: {str(e)}")
+    model = None
+
 @app.route('/summarize', methods=['POST'])
 @token_required
 def summarize_text(current_user):
@@ -389,12 +407,17 @@ Text to summarize:
 {text}
 ---"""
 
-        response = model.generate_content(prompt)
-        
-        if not response or not response.text:
-            raise Exception("Failed to generate summary")
+        # Generate summary with retry logic
+        @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+        def generate_summary(prompt):
+            response = model.generate_content(prompt)
+            if not response or not response.text:
+                raise Exception("Empty response from Gemini")
+                
+            return response.text.strip()
             
-        summary = response.text.strip()
+        # Generate summary
+        summary = generate_summary(prompt)
         
         # Update daily usage
         new_usage = {
