@@ -90,13 +90,12 @@ const Billing = () => {
   const fetchPaymentMethods = async () => {
     try {
       setLoadingPaymentMethods(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods?email=${encodeURIComponent(user.email)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email: user.email }),
       });
 
       if (!response.ok) {
@@ -428,36 +427,6 @@ const Billing = () => {
             </div>
           </div>
 
-          {/* Cancel Subscription Dialog */}
-          {showCancelDialog && (
-            <div className="dialog-overlay">
-              <div className="dialog">
-                <h3>Cancel Subscription</h3>
-                <p>Are you sure you want to cancel your Pro subscription?</p>
-                <ul>
-                  <li>You'll continue to have access to Pro features until the end of your current billing period</li>
-                  <li>You won't be charged again</li>
-                  <li>You can resubscribe at any time</li>
-                </ul>
-                <div className="dialog-actions">
-                  <button 
-                    onClick={() => setShowCancelDialog(false)}
-                    disabled={cancelling}
-                  >
-                    Keep Subscription
-                  </button>
-                  <button 
-                    className="confirm"
-                    onClick={handleCancelSubscription}
-                    disabled={cancelling}
-                  >
-                    {cancelling ? 'Cancelling...' : 'Yes, Cancel Subscription'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Add Payment Method Dialog */}
           {showAddPaymentMethod && (
             <div className="dialog-overlay">
@@ -485,6 +454,38 @@ const Billing = () => {
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Cancel Subscription Dialog */}
+          {showCancelDialog && (
+            <div className="dialog-overlay">
+              <div className="dialog">
+                <h3>Cancel Subscription</h3>
+                <p>Are you sure you want to cancel your Pro subscription?</p>
+                <ul>
+                  <li>You'll continue to have access to Pro features until the end of your current billing period</li>
+                  <li>You won't be charged again</li>
+                  <li>You can resubscribe at any time</li>
+                </ul>
+                <div className="dialog-actions">
+                  <button 
+                    type="button"
+                    onClick={() => setShowCancelDialog(false)}
+                    disabled={cancelling}
+                  >
+                    Keep Subscription
+                  </button>
+                  <button 
+                    type="button"
+                    className="confirm"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? 'Cancelling...' : 'Yes, Cancel Subscription'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
