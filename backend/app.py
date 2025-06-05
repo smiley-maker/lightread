@@ -1,5 +1,11 @@
-from flask import request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import cross_origin
+from stripe_api import stripe_api
+
+app = Flask(__name__)
+
+# Register the Stripe API blueprint
+app.register_blueprint(stripe_api, url_prefix='/api')
 
 @app.route('/api/cancel-subscription', methods=['POST'])
 @cross_origin()
@@ -15,7 +21,7 @@ def cancel_subscription():
         return jsonify(result)
     except Exception as e:
         print(f"Error in cancel_subscription route: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e)}), 500 
 
 @app.route('/api/payment-methods', methods=['GET'])
 @cross_origin()

@@ -328,6 +328,36 @@ def verify_session(session_id):
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@stripe_api.route('/payment-methods', methods=['GET'])
+def get_payment_methods_route():
+    try:
+        email = request.args.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+            
+        result = get_payment_methods(email)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error getting payment methods: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@stripe_api.route('/payment-methods', methods=['POST'])
+def update_payment_method_route():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        payment_method_id = data.get('payment_method_id')
+        
+        if not email or not payment_method_id:
+            return jsonify({'error': 'Email and payment method ID are required'}), 400
+            
+        result = update_payment_method(email, payment_method_id)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error updating payment method: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 def handle_checkout_session_completed(session):
     """
     Handle a completed checkout session
