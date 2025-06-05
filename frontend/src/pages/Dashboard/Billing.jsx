@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserSubscription, updateUserSubscription } from '../../lib/supabase';
 import { createCheckoutSession, createBillingPortalSession } from '../../lib/stripe';
-import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import './Billing.css';
 
 const Billing = () => {
   const { user } = useAuth();
-  const stripe = useStripe();
-  const elements = useElements();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -19,9 +16,42 @@ const Billing = () => {
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const cardElementRef = useRef(null);
+  const stripeRef = useRef(null);
   
   // Stripe price ID for the Pro plan
   const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
+
+  useEffect(() => {
+    // Initialize Stripe
+    const initStripe = async () => {
+      const { loadStripe } = await import('@stripe/stripe-js');
+      stripeRef.current = await loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+    };
+    initStripe();
+  }, []);
+
+  useEffect(() => {
+    if (showAddPaymentMethod && stripeRef.current && !cardElementRef.current) {
+      const elements = stripeRef.current.elements();
+      const cardElement = elements.create('card', {
+        style: {
+          base: {
+            fontSize: '16px',
+            color: '#424770',
+            '::placeholder': {
+              color: '#aab7c4',
+            },
+          },
+          invalid: {
+            color: '#9e2146',
+          },
+        },
+      });
+      cardElement.mount('#card-element');
+      cardElementRef.current = cardElement;
+    }
+  }, [showAddPaymentMethod]);
 
   useEffect(() => {
     const fetchSubscription = async () => {
@@ -191,7 +221,7 @@ const Billing = () => {
   const handleAddPaymentMethod = async (event) => {
     event.preventDefault();
     
-    if (!stripe || !elements) {
+    if (!stripeRef.current || !cardElementRef.current) {
       return;
     }
 
@@ -199,9 +229,9 @@ const Billing = () => {
       setProcessingPayment(true);
       
       // Create a payment method using Stripe Elements
-      const { paymentMethod, error } = await stripe.createPaymentMethod({
+      const { paymentMethod, error } = await stripeRef.current.createPaymentMethod({
         type: 'card',
-        card: elements.getElement(CardElement),
+        card: cardElementRef.current,
       });
 
       if (error) {
@@ -435,22 +465,7 @@ const Billing = () => {
                 <form onSubmit={handleAddPaymentMethod} className="payment-form">
                   <div className="form-group">
                     <label>Card Details</label>
-                    <CardElement
-                      options={{
-                        style: {
-                          base: {
-                            fontSize: '16px',
-                            color: '#424770',
-                            '::placeholder': {
-                              color: '#aab7c4',
-                            },
-                          },
-                          invalid: {
-                            color: '#9e2146',
-                          },
-                        },
-                      }}
-                    />
+                    <div id="card-element"></div>
                   </div>
                   <div className="dialog-actions">
                     <button 
@@ -463,7 +478,7 @@ const Billing = () => {
                     <button 
                       type="submit"
                       className="confirm"
-                      disabled={!stripe || processingPayment}
+                      disabled={!stripeRef.current || processingPayment}
                     >
                       {processingPayment ? 'Adding...' : 'Add Payment Method'}
                     </button>

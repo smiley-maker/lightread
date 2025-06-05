@@ -32,9 +32,19 @@ fi
 echo "Directory contents before build:"
 ls -la
 
+# Install dependencies
+echo "Installing dependencies..."
+npm install
+
 # Run the build
 echo "Starting build process..."
-npm run build
+npm run vercel-build
+
+# Check build status
+if [ $? -ne 0 ]; then
+  echo "ERROR: Build failed!"
+  exit 1
+fi
 
 # Ensure dist directory exists and has content
 if [[ -d "dist" ]]; then

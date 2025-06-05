@@ -631,4 +631,122 @@ def handle_subscription_deleted(subscription):
     except Exception as e:
         print(f"Error handling subscription deletion: {str(e)}")
         import traceback
-        traceback.print_exc() 
+        traceback.print_exc()
+
+def cancel_subscription(email):
+    try:
+        # Get the customer
+        customers = stripe.Customer.list(email=email, limit=1)
+        if not customers.data:
+            raise Exception('Customer not found')
+        
+        customer = customers.data[0]
+        
+        # Get the customer's subscriptions
+        subscriptions = stripe.Subscription.list(customer=customer.id, limit=1)
+        if not subscriptions.data:
+            raise Exception('No active subscription found')
+        
+        subscription = subscriptions.data[0]
+        
+        # Cancel the subscription at period end
+        cancelled_subscription = stripe.Subscription.modify(
+            subscription.id,
+            cancel_at_period_end=True
+        )
+        
+        # Find the user in the database
+        try:
+            auth_response = supabase.auth.admin.list_users()
+            users_list = auth_response if not hasattr(auth_response, 'users') else auth_response.users
+            
+            user_id = None
+            for user in users_list:
+                user_email = user.email if hasattr(user, 'email') else user.get('email')
+                if user_email == email:
+                    user_id = user.id if hasattr(user, 'id') else user.get('id')
+                    break
+            
+            if not user_id:
+                raise Exception('User not found in database')
+            
+            # Update subscription in database
+            supabase.table('subscriptions').update({
+                'status': 'cancelled',
+                'plan_type': 'free',
+                'cancelled_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }).eq('user_id', user_id).eq('stripe_subscription_id', subscription.id).execute()
+            
+        except Exception as db_err:
+            print(f"Database error updating subscription: {db_err}")
+            raise db_err
+        
+        return {
+            'success': True,
+            'subscription': cancelled_subscription,
+            'message': 'Subscription cancelled successfully'
+        }
+    except Exception as e:
+        print(f"Error cancelling subscription: {str(e)}")
+        raise e
+
+def update_payment_method(email, payment_method_id):
+    """
+    Update the customer's default payment method
+    """
+    try:
+        # Get the customer
+        customers = stripe.Customer.list(email=email, limit=1)
+        if not customers.data:
+            raise Exception('Customer not found')
+        
+        customer = customers.data[0]
+        
+        # Attach the payment method to the customer
+        stripe.PaymentMethod.attach(
+            payment_method_id,
+            customer=customer.id
+        )
+        
+        # Set as default payment method
+        stripe.Customer.modify(
+            customer.id,
+            invoice_settings={
+                'default_payment_method': payment_method_id
+            }
+        )
+        
+        return {
+            'success': True,
+            'message': 'Payment method updated successfully'
+        }
+    except Exception as e:
+        print(f"Error updating payment method: {str(e)}")
+        raise e
+
+def get_payment_methods(email):
+    """
+    Get all payment methods for a customer
+    """
+    try:
+        # Get the customer
+        customers = stripe.Customer.list(email=email, limit=1)
+        if not customers.data:
+            raise Exception('Customer not found')
+        
+        customer = customers.data[0]
+        
+        # Get all payment methods
+        payment_methods = stripe.PaymentMethod.list(
+            customer=customer.id,
+            type='card'
+        )
+        
+        return {
+            'success': True,
+            'payment_methods': payment_methods.data
+        }
+    except Exception as e:
+        print(f"Error getting payment methods: {str(e)}")
+        raise e 
