@@ -96,6 +96,7 @@ const Billing = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        mode: 'cors'
       });
 
       if (!response.ok) {
@@ -196,6 +197,7 @@ const Billing = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify({ email: user.email }),
       });
 
@@ -248,6 +250,7 @@ const Billing = () => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
+        mode: 'cors',
         body: JSON.stringify({ 
           email: user.email,
           payment_method_id: paymentMethod.id 

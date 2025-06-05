@@ -76,8 +76,8 @@ export const createBillingPortalSession = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'cors', // Explicitly set CORS mode
-      credentials: 'include', // Include cookies if needed
+      mode: 'cors',
+      credentials: 'include',
       body: JSON.stringify({ 
         email: userEmail
       }),
@@ -126,7 +126,7 @@ export const verifyCheckoutSession = async (sessionId) => {
       headers: {
         'Content-Type': 'application/json',
       },
-      mode: 'cors', // Explicitly set CORS mode
+      mode: 'cors',
       credentials: 'include',
     });
 
