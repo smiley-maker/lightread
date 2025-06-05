@@ -27,7 +27,7 @@ app = Flask(__name__)
 # Configure CORS with more specific settings
 CORS(app, resources={
     r"/*": {
-        "origins": "*",  # Allow all origins - we'll rely on JWT for security
+        "origins": ["https://www.lightread.xyz", "https://lightread.xyz"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True,
@@ -622,13 +622,6 @@ def after_request(response):
         # For webhook requests, we don't need to set CORS headers
         # because Stripe doesn't care about them, it just needs a 200 response
         pass
-    elif origin:
-        # For all other origins, allow the request with proper CORS headers
-        # We rely on JWT token validation for security instead of origin checking
-        response.headers.add('Access-Control-Allow-Origin', origin)
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
     
     return response
 
