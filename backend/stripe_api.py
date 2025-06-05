@@ -358,6 +358,72 @@ def update_payment_method_route():
         print(f"Error updating payment method: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+@stripe_api.route('/payment-methods/<payment_method_id>/default', methods=['POST'])
+def set_default_payment_method_route(payment_method_id):
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+            
+        # Get the customer
+        customers = stripe.Customer.list(email=email)
+        if not customers.data:
+            return jsonify({'error': 'Customer not found'}), 404
+            
+        customer = customers.data[0]
+        
+        # Update the customer's default payment method
+        stripe.Customer.modify(
+            customer.id,
+            invoice_settings={
+                'default_payment_method': payment_method_id
+            }
+        )
+        
+        # Update the subscription's default payment method if there's an active subscription
+        subscriptions = stripe.Subscription.list(customer=customer.id, status='active')
+        if subscriptions.data:
+            for subscription in subscriptions.data:
+                stripe.Subscription.modify(
+                    subscription.id,
+                    default_payment_method=payment_method_id
+                )
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        print(f"Error setting default payment method: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@stripe_api.route('/payment-methods/<payment_method_id>', methods=['DELETE'])
+def delete_payment_method_route(payment_method_id):
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+            
+        # Get the customer
+        customers = stripe.Customer.list(email=email)
+        if not customers.data:
+            return jsonify({'error': 'Customer not found'}), 404
+            
+        customer = customers.data[0]
+        
+        # Check if this is the default payment method
+        if customer.invoice_settings.default_payment_method == payment_method_id:
+            return jsonify({'error': 'Cannot delete default payment method. Set another payment method as default first.'}), 400
+        
+        # Detach the payment method
+        stripe.PaymentMethod.detach(payment_method_id)
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        print(f"Error deleting payment method: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 def handle_checkout_session_completed(session):
     """
     Handle a completed checkout session

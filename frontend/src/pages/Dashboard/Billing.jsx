@@ -278,6 +278,67 @@ const Billing = () => {
     }
   };
 
+  const handleSetDefaultPaymentMethod = async (paymentMethodId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods/${paymentMethodId}/default`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        mode: 'cors',
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to set default payment method');
+      }
+
+      setMessage({ 
+        text: 'Default payment method updated successfully!', 
+        type: 'success' 
+      });
+      fetchPaymentMethods();
+    } catch (err) {
+      console.error('Error setting default payment method:', err);
+      setMessage({ 
+        text: 'Failed to update default payment method. Please try again.', 
+        type: 'error' 
+      });
+    }
+  };
+
+  const handleDeletePaymentMethod = async (paymentMethodId) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods/${paymentMethodId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        mode: 'cors',
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete payment method');
+      }
+
+      setMessage({ 
+        text: 'Payment method deleted successfully!', 
+        type: 'success' 
+      });
+      fetchPaymentMethods();
+    } catch (err) {
+      console.error('Error deleting payment method:', err);
+      setMessage({ 
+        text: err.message || 'Failed to delete payment method. Please try again.', 
+        type: 'error' 
+      });
+    }
+  };
+
   return (
     <div className="dashboard-page">
       <h1 className="dashboard-title">Modify Plan Selection</h1>
@@ -365,9 +426,26 @@ const Billing = () => {
                                   Expires {method.card.exp_month}/{method.card.exp_year}
                                 </span>
                               </div>
-                              {method.id === subscription.default_payment_method && (
-                                <span className="default-badge">Default</span>
-                              )}
+                              <div className="card-actions">
+                                {method.id === subscription.default_payment_method ? (
+                                  <span className="default-badge">Default</span>
+                                ) : (
+                                  <button 
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => handleSetDefaultPaymentMethod(method.id)}
+                                  >
+                                    Make Default
+                                  </button>
+                                )}
+                                {method.id !== subscription.default_payment_method && (
+                                  <button 
+                                    className="btn btn-danger btn-sm"
+                                    onClick={() => handleDeletePaymentMethod(method.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
