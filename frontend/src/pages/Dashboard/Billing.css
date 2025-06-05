@@ -226,4 +226,153 @@
 .settings-message.error {
   background-color: #fee2e2;
   color: #991b1b;
+}
+
+.subscription-management-section {
+  margin-top: 2rem;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.subscription-info-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.subscription-info-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.subscription-info-card p {
+  color: #666;
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+}
+
+.subscription-actions {
+  margin: 1.5rem 0;
+}
+
+.btn-primary {
+  background-color: #BAA5FF;
+  color: #000;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background-color: #a890ff;
+}
+
+.cancellation-info {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e9ecef;
+}
+
+.cancellation-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.cancellation-info ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.cancellation-info li {
+  color: #666;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+.note {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+  color: #856404;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-top: 1rem;
+}
+
+.subscription-faq {
+  margin-top: 2rem;
+}
+
+.subscription-faq h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.faq-item {
+  margin-bottom: 1.5rem;
+}
+
+.faq-item h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.faq-item p {
+  color: #666;
+  line-height: 1.5;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .subscription-management-section {
+    background: #1a1a1a;
+  }
+
+  .section-title,
+  .subscription-info-card h3,
+  .cancellation-info h4,
+  .subscription-faq h3,
+  .faq-item h4 {
+    color: #fff;
+  }
+
+  .subscription-info-card {
+    background: #2a2a2a;
+  }
+
+  .subscription-info-card p,
+  .cancellation-info li,
+  .faq-item p {
+    color: #ccc;
+  }
+
+  .cancellation-info {
+    border-top-color: #444;
+  }
+
+  .note {
+    background: #2c2416;
+    border-color: #3d2e1a;
+    color: #ffd700;
+  }
 } 
