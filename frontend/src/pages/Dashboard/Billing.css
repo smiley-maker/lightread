@@ -495,6 +495,8 @@
 }
 
 /* Dark mode support */
+/* Removing for now because the rest of the site doesn't support it */
+/*
 @media (prefers-color-scheme: dark) {
   .dashboard-title {
     color: #e2e8f0;
@@ -615,4 +617,4 @@
     border-color: #818cf8;
     box-shadow: 0 0 0 1px #818cf8;
   }
-}
+}*/
