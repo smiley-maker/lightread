@@ -148,7 +148,7 @@ async function fetchDropdownOptions() {
         'Content-Type': 'application/json'
       },
       mode: 'cors',
-      credentials: 'same-origin'
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -214,7 +214,7 @@ async function getUserData(forceRefresh = false) {
         'Authorization': `Bearer ${token}`
       },
       mode: 'cors',
-      credentials: 'same-origin'
+      credentials: 'include'
     });
     
     if (!limitsResponse.ok) {
@@ -230,7 +230,7 @@ async function getUserData(forceRefresh = false) {
         'Authorization': `Bearer ${token}`
       },
       mode: 'cors',
-      credentials: 'same-origin'
+      credentials: 'include'
     });
 
     if (!settingsResponse.ok) {
@@ -246,7 +246,7 @@ async function getUserData(forceRefresh = false) {
         'Authorization': `Bearer ${token}`
       },
       mode: 'cors',
-      credentials: 'same-origin'
+      credentials: 'include'
     });
 
     if (!usageResponse.ok) {

@@ -466,7 +466,7 @@ const Billing = () => {
 
                 <div className="subscription-actions">
                   <button 
-                    className="btn btn-primary"
+                    className="btn btn-danger"
                     onClick={() => setShowCancelDialog(true)}
                   >
                     Cancel Subscription
