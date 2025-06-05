@@ -22,6 +22,10 @@ const Billing = () => {
   // Stripe price ID for the Pro plan
   const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
 
+  // Define these before they're used in useEffect
+  const isFreePlan = subscription?.plan_type === 'free';
+  const isProPlan = subscription?.plan_type === 'pro';
+
   useEffect(() => {
     // Initialize Stripe
     const initStripe = async () => {
@@ -78,10 +82,10 @@ const Billing = () => {
   }, [user]);
 
   useEffect(() => {
-    if (user && isProPlan) {
+    if (user && subscription?.plan_type === 'pro') {
       fetchPaymentMethods();
     }
-  }, [user, isProPlan]);
+  }, [user, subscription]);
 
   const fetchPaymentMethods = async () => {
     try {
@@ -271,9 +275,6 @@ const Billing = () => {
       setProcessingPayment(false);
     }
   };
-
-  const isFreePlan = subscription?.plan_type === 'free';
-  const isProPlan = subscription?.plan_type === 'pro';
 
   return (
     <div className="dashboard-page">
