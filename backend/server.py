@@ -27,7 +27,7 @@ app = Flask(__name__)
 # Configure CORS with more specific settings
 CORS(app, resources={
     r"/*": {
-        "origins": ["https://www.lightread.xyz"],
+        "origins": "https://www.lightread.xyz",
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True,
