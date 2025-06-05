@@ -27,13 +27,12 @@ app = Flask(__name__)
 # Configure CORS with more specific settings
 CORS(app, resources={
     r"/*": {
-        "origins": "https://www.lightread.xyz",
+        "origins": ["https://www.lightread.xyz"],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
         "supports_credentials": True,
         "expose_headers": ["Access-Control-Allow-Origin"],
-        "max_age": 600,
-        "send_wildcard": False
+        "max_age": 600
     }
 })
 
@@ -615,15 +614,13 @@ def home():
 
 @app.after_request
 def after_request(response):
-    # Get the origin from the request
-    origin = request.headers.get('Origin', '')
-    
-    # Check if the request is for the webhook endpoint
+    # Only log request info for webhook requests
     if request.path == '/api/webhook':
-        # For webhook requests, we don't need to set CORS headers
-        # because Stripe doesn't care about them, it just needs a 200 response
-        pass
-    
+        print('==================== WEBHOOK REQUEST ====================')
+        print(f"Method: {request.method}")
+        print(f"Path: {request.path}")
+        print(f"Headers: {dict(request.headers)}")
+        print('==================== END REQUEST INFO ====================')
     return response
 
 @app.before_request
