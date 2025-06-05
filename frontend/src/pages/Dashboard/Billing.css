@@ -349,40 +349,130 @@
   line-height: 1.5;
 }
 
+.payment-methods-section {
+  margin: 2rem 0;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.payment-methods-section h4 {
+  margin-bottom: 1rem;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.payment-methods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.payment-method-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.payment-method-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.card-details {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.card-brand {
+  text-transform: capitalize;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.card-last4 {
+  color: #4b5563;
+}
+
+.card-expiry {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.default-badge {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.payment-form {
+  padding: 1rem;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Stripe Elements container */
+.StripeElement {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.StripeElement--focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 1px #6366f1;
+}
+
+.StripeElement--invalid {
+  border-color: #ef4444;
+}
+
+.StripeElement--complete {
+  border-color: #10b981;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
-  .subscription-management-section {
-    background: #1a1a1a;
-    border-color: #333;
+  .payment-form {
+    background: #1f2937;
   }
 
-  .section-title,
-  .subscription-info-card h3,
-  .cancellation-info h4,
-  .subscription-faq h3,
-  .faq-item h4 {
-    color: #fff;
+  .form-group label {
+    color: #e5e7eb;
   }
 
-  .subscription-info-card,
-  .faq-item {
-    background: #2a2a2a;
-    border-color: #333;
+  .StripeElement {
+    background: #374151;
+    border-color: #4b5563;
   }
 
-  .subscription-info-card p,
-  .cancellation-info li,
-  .faq-item p {
-    color: #ccc;
+  .StripeElement--focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 1px #818cf8;
   }
-
-  .cancellation-info {
-    border-top-color: #333;
-  }
-
-  .note {
-    background: #2c2416;
-    border-color: #3d2e1a;
-    color: #ffd700;
-  }
-} 
+}

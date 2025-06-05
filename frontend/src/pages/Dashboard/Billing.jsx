@@ -2,14 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getUserSubscription, updateUserSubscription } from '../../lib/supabase';
 import { createCheckoutSession, createBillingPortalSession } from '../../lib/stripe';
+import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import './Billing.css';
 
 const Billing = () => {
   const { user } = useAuth();
+  const stripe = useStripe();
+  const elements = useElements();
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
+  const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   
   // Stripe price ID for the Pro plan
   const STRIPE_PRICE_ID = import.meta.env.VITE_STRIPE_PRICE_ID;
@@ -37,6 +46,41 @@ const Billing = () => {
     
     fetchSubscription();
   }, [user]);
+
+  useEffect(() => {
+    if (user && isProPlan) {
+      fetchPaymentMethods();
+    }
+  }, [user, isProPlan]);
+
+  const fetchPaymentMethods = async () => {
+    try {
+      setLoadingPaymentMethods(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment methods');
+      }
+
+      const data = await response.json();
+      setPaymentMethods(data.payment_methods);
+    } catch (err) {
+      console.error('Error fetching payment methods:', err);
+      setMessage({ 
+        text: 'Failed to load payment methods. Please try again.', 
+        type: 'error' 
+      });
+    } finally {
+      setLoadingPaymentMethods(false);
+    }
+  };
 
   const handlePlanChange = async (planType) => {
     if (!user || updating || (subscription && subscription.plan_type === planType)) return;
@@ -107,6 +151,94 @@ const Billing = () => {
         text: 'Failed to open billing portal. Please try again.', 
         type: 'error' 
       });
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    try {
+      setCancelling(true);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/cancel-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email: user.email }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel subscription');
+      }
+
+      const data = await response.json();
+      setSubscription(data);
+      setMessage({ 
+        text: 'Your subscription has been cancelled. You will retain access to Pro features until the end of your billing period.', 
+        type: 'success' 
+      });
+      setShowCancelDialog(false);
+    } catch (err) {
+      console.error('Error cancelling subscription:', err);
+      setMessage({ 
+        text: 'Failed to cancel subscription. Please try again.', 
+        type: 'error' 
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleAddPaymentMethod = async (event) => {
+    event.preventDefault();
+    
+    if (!stripe || !elements) {
+      return;
+    }
+
+    try {
+      setProcessingPayment(true);
+      
+      // Create a payment method using Stripe Elements
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: elements.getElement(CardElement),
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Update the payment method on the backend
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/payment-methods`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          email: user.email,
+          payment_method_id: paymentMethod.id 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update payment method');
+      }
+
+      setMessage({ 
+        text: 'Payment method added successfully!', 
+        type: 'success' 
+      });
+      setShowAddPaymentMethod(false);
+      fetchPaymentMethods();
+    } catch (err) {
+      console.error('Error adding payment method:', err);
+      setMessage({ 
+        text: err.message || 'Failed to add payment method. Please try again.', 
+        type: 'error' 
+      });
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -183,27 +315,59 @@ const Billing = () => {
                 <p>You are currently on the Pro plan, billed monthly at $5.00.</p>
                 <p>Your subscription will automatically renew each month unless cancelled.</p>
                 
+                <div className="payment-methods-section">
+                  <h4>Payment Methods</h4>
+                  {loadingPaymentMethods ? (
+                    <div className="loading">Loading payment methods...</div>
+                  ) : (
+                    <>
+                      {paymentMethods.length > 0 ? (
+                        <div className="payment-methods-list">
+                          {paymentMethods.map((method) => (
+                            <div key={method.id} className="payment-method-card">
+                              <div className="card-details">
+                                <span className="card-brand">{method.card.brand}</span>
+                                <span className="card-last4">•••• {method.card.last4}</span>
+                                <span className="card-expiry">
+                                  Expires {method.card.exp_month}/{method.card.exp_year}
+                                </span>
+                              </div>
+                              {method.id === subscription.default_payment_method && (
+                                <span className="default-badge">Default</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>No payment methods found.</p>
+                      )}
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => setShowAddPaymentMethod(true)}
+                      >
+                        Add Payment Method
+                      </button>
+                    </>
+                  )}
+                </div>
+
                 <div className="subscription-actions">
                   <button 
                     className="btn btn-primary"
-                    onClick={handleManageSubscription}
+                    onClick={() => setShowCancelDialog(true)}
                   >
-                    Manage Subscription
+                    Cancel Subscription
                   </button>
                 </div>
 
                 <div className="cancellation-info">
-                  <h4>How to Cancel Your Subscription</h4>
-                  <ol>
-                    <li>Click the "Manage Subscription" button above</li>
-                    <li>You'll be redirected to our secure billing portal</li>
-                    <li>Select "Cancel Subscription"</li>
-                    <li>Choose whether to cancel immediately or at the end of your billing period</li>
-                  </ol>
-                  <p className="note">
-                    Note: When you cancel, you'll continue to have access to Pro features until the end of your current billing period. 
-                    After that, you'll be automatically switched to the Free plan.
-                  </p>
+                  <h4>About Cancellation</h4>
+                  <p>When you cancel your subscription:</p>
+                  <ul>
+                    <li>You'll continue to have access to Pro features until the end of your current billing period</li>
+                    <li>You won't be charged again</li>
+                    <li>You can resubscribe at any time</li>
+                  </ul>
                 </div>
               </div>
             )}
@@ -232,6 +396,82 @@ const Billing = () => {
               </div>
             </div>
           </div>
+
+          {/* Cancel Subscription Dialog */}
+          {showCancelDialog && (
+            <div className="dialog-overlay">
+              <div className="dialog">
+                <h3>Cancel Subscription</h3>
+                <p>Are you sure you want to cancel your Pro subscription?</p>
+                <ul>
+                  <li>You'll continue to have access to Pro features until the end of your current billing period</li>
+                  <li>You won't be charged again</li>
+                  <li>You can resubscribe at any time</li>
+                </ul>
+                <div className="dialog-actions">
+                  <button 
+                    onClick={() => setShowCancelDialog(false)}
+                    disabled={cancelling}
+                  >
+                    Keep Subscription
+                  </button>
+                  <button 
+                    className="confirm"
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? 'Cancelling...' : 'Yes, Cancel Subscription'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Add Payment Method Dialog */}
+          {showAddPaymentMethod && (
+            <div className="dialog-overlay">
+              <div className="dialog">
+                <h3>Add Payment Method</h3>
+                <form onSubmit={handleAddPaymentMethod} className="payment-form">
+                  <div className="form-group">
+                    <label>Card Details</label>
+                    <CardElement
+                      options={{
+                        style: {
+                          base: {
+                            fontSize: '16px',
+                            color: '#424770',
+                            '::placeholder': {
+                              color: '#aab7c4',
+                            },
+                          },
+                          invalid: {
+                            color: '#9e2146',
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                  <div className="dialog-actions">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAddPaymentMethod(false)}
+                      disabled={processingPayment}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit"
+                      className="confirm"
+                      disabled={!stripe || processingPayment}
+                    >
+                      {processingPayment ? 'Adding...' : 'Add Payment Method'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
