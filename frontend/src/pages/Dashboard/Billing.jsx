@@ -95,7 +95,12 @@ const Billing = () => {
       }
       
       localStorage.setItem('userEmail', user.email);
-      await createBillingPortalSession();
+      const { url } = await createBillingPortalSession();
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('Failed to get billing portal URL');
+      }
     } catch (err) {
       console.error('Error opening billing portal:', err);
       setMessage({ 

@@ -231,34 +231,36 @@
 .subscription-management-section {
   margin-top: 2rem;
   padding: 2rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
 }
 
 .section-title {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  color: #333;
+  color: #1f2937;
 }
 
 .subscription-info-card {
-  background: #f8f9fa;
+  background: #f9fafb;
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
+  border: 1px solid #e5e7eb;
 }
 
 .subscription-info-card h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: #333;
+  color: #1f2937;
 }
 
 .subscription-info-card p {
-  color: #666;
+  color: #4b5563;
   margin-bottom: 0.75rem;
   line-height: 1.5;
 }
@@ -275,24 +277,25 @@
   border: none;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
   background-color: #a890ff;
+  transform: translateY(-1px);
 }
 
 .cancellation-info {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e9ecef;
+  border-top: 1px solid #e5e7eb;
 }
 
 .cancellation-info h4 {
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: #333;
+  color: #1f2937;
 }
 
 .cancellation-info ol {
@@ -301,15 +304,15 @@
 }
 
 .cancellation-info li {
-  color: #666;
+  color: #4b5563;
   margin-bottom: 0.5rem;
   line-height: 1.5;
 }
 
 .note {
-  background: #fff3cd;
-  border: 1px solid #ffeeba;
-  color: #856404;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  color: #92400e;
   padding: 1rem;
   border-radius: 6px;
   margin-top: 1rem;
@@ -323,22 +326,26 @@
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  color: #333;
+  color: #1f2937;
 }
 
 .faq-item {
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
 }
 
 .faq-item h4 {
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: #333;
+  color: #1f2937;
 }
 
 .faq-item p {
-  color: #666;
+  color: #4b5563;
   line-height: 1.5;
 }
 
@@ -346,6 +353,7 @@
 @media (prefers-color-scheme: dark) {
   .subscription-management-section {
     background: #1a1a1a;
+    border-color: #333;
   }
 
   .section-title,
@@ -356,8 +364,10 @@
     color: #fff;
   }
 
-  .subscription-info-card {
+  .subscription-info-card,
+  .faq-item {
     background: #2a2a2a;
+    border-color: #333;
   }
 
   .subscription-info-card p,
@@ -367,7 +377,7 @@
   }
 
   .cancellation-info {
-    border-top-color: #444;
+    border-top-color: #333;
   }
 
   .note {
