@@ -6,13 +6,6 @@ import config from './config.js';
 // Constants
 const SERVER_URL = config.SERVER_URL;
 
-// Auth state management
-let authState = {
-  isLoggedIn: false,
-  token: null,
-  user: null
-};
-
 // Rate limiting configuration
 const rateLimits = {
   summarize: {
@@ -42,39 +35,45 @@ function isRateLimited(action) {
   return false;
 }
 
-// Load auth state from storage and keep it in sync
-async function loadAuthState() {
+// Function to get current auth state from storage
+async function getAuthState() {
   const { token, user } = await chrome.storage.local.get(['token', 'user']);
-  if (token && user) {
-    authState = {
-      isLoggedIn: true,
-      token: token,
-      user: user
-    };
-  } else {
-    authState = {
-      isLoggedIn: false,
-      token: null,
-      user: null
-    };
-  }
-  return authState;
+  return {
+    isLoggedIn: !!(token && user),
+    token: token,
+    user: user
+  };
 }
 
-// Initialize auth state
-loadAuthState();
+// Function to validate token with backend
+async function validateToken(token) {
+  try {
+    const response = await fetch(`${SERVER_URL}/user/limits`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      mode: 'cors',
+      credentials: 'same-origin'
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Error validating token:', error);
+    return false;
+  }
+}
 
 // Listen for storage changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && (changes.token || changes.user)) {
-    loadAuthState();
+    // Storage changed, but we don't need to do anything here since we always check with backend
+    console.log('Storage changed, will check with backend on next operation');
   }
 });
 
 // Listen for auth state changes from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'AUTH_STATE_CHANGE') {
-    authState = request.authState;
+    // We no longer maintain in-memory auth state, so just acknowledge
     sendResponse({ success: true });
   } else if (request.type === 'THEME_CHANGE') {
     // Update theme for all open popups
@@ -94,7 +93,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(success => {
         sendResponse({ 
           success: success, 
-          token: success ? authState.token : null 
+          token: success ? 'refreshed' : null 
         });
       })
       .catch(error => {
@@ -112,26 +111,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       jwtToken: request.jwtToken
     });
     
-    // Also update the authState for immediate use
-    if (request.jwtToken) {
-      authState = {
-        isLoggedIn: true,
-        token: request.jwtToken,
-        user: request.session
-      };
-    }
-    
     sendResponse({ success: true });
   } else if (request.type === 'SESSION_CLEAR') {
     // Clear extension storage
     chrome.storage.session.clear();
-    
-    // Clear authState
-    authState = {
-      isLoggedIn: false,
-      token: null,
-      user: null
-    };
     
     sendResponse({ success: true });
   }
@@ -172,57 +155,31 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         throw new Error('You are sending too many requests. Please wait a moment before trying again.');
       }
 
-      // Check auth state
+      // Get current auth state from storage
+      const authState = await getAuthState();
+      
       if (!authState.isLoggedIn) {
-        // Try to load auth state from storage
-        const { token, user } = await chrome.storage.local.get(['token', 'user']);
-        if (token && user) {
-          authState = {
-            isLoggedIn: true,
-            token: token,
-            user: user
-          };
-        } else {
-          throw new Error('Please login to use LightRead');
-        }
+        throw new Error('Please login to use LightRead');
       }
 
-      // JWT expiry check and refresh logic
-      const payload = decodeJwt(authState.token);
-      const now = Math.floor(Date.now() / 1000);
-      let validToken = true;
-      if (payload && payload.exp && payload.exp < now) {
-        // Token expired, try to refresh
-        try {
-          const response = await fetch(`${SERVER_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${authState.token}`
-            },
-            mode: 'cors',
-            credentials: 'same-origin'
-          });
-          if (response.ok) {
-            const data = await response.json();
-            authState.token = data.token;
-            await chrome.storage.local.set({ token: data.token });
-          } else {
-            validToken = false;
-          }
-        } catch (e) {
-          validToken = false;
+      // Validate token with backend
+      const isValidToken = await validateToken(authState.token);
+      if (!isValidToken) {
+        // Try to refresh token
+        const refreshed = await refreshToken();
+        if (!refreshed) {
+          // Clear invalid session
+          await chrome.storage.local.remove(['token', 'user']);
+          chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
+          throw new Error('Session expired. Please login again.');
         }
-      }
-      if (!validToken) {
-        // Refresh failed, clear auth state and show error
-        authState = { isLoggedIn: false, token: null, user: null };
-        await chrome.storage.local.remove(['token', 'user']);
-        chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
-        throw new Error('Session expired. Please login again.');
+        // Get the new token
+        const newAuthState = await getAuthState();
+        authState.token = newAuthState.token;
       }
 
       // Get user settings for summary preferences
-      const settings = await getUserSettings();
+      const settings = await getUserSettings(authState.token);
       const summaryLength = settings?.preferred_summary_length || 'medium';
 
       // Basic input validation
@@ -318,12 +275,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Function to refresh the auth token
 async function refreshToken() {
   try {
-    if (!authState.token) return false;
+    const { token } = await chrome.storage.local.get('token');
+    if (!token) return false;
     
     const response = await fetch(`${SERVER_URL}/auth/refresh`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authState.token}`
+        'Authorization': `Bearer ${token}`
       },
       mode: 'cors',
       credentials: 'same-origin'
@@ -338,7 +296,6 @@ async function refreshToken() {
     }
 
     const data = await response.json();
-    authState.token = data.token;
     await chrome.storage.local.set({ token: data.token });
     
     // Notify all popups of the token refresh
@@ -351,21 +308,19 @@ async function refreshToken() {
   } catch (error) {
     console.error('Error refreshing token:', error);
     // Clear auth state on refresh failure
-    authState = { isLoggedIn: false, token: null, user: null };
     await chrome.storage.local.remove(['token', 'user']);
     return false;
   }
 }
 
 // Function to get user settings
-async function getUserSettings() {
+async function getUserSettings(token) {
   try {
     const response = await fetch(`${SERVER_URL}/user/settings`, {
       headers: {
-        'Authorization': `Bearer ${authState.token}`
+        'Authorization': `Bearer ${token}`
       },
-      // Add CORS mode to allow for better error handling
-      mode: 'cors', 
+      mode: 'cors',
       credentials: 'same-origin'
     });
 
@@ -373,7 +328,8 @@ async function getUserSettings() {
       if (response.status === 401) {
         const refreshed = await refreshToken();
         if (refreshed) {
-          return getUserSettings();
+          const newAuthState = await getAuthState();
+          return getUserSettings(newAuthState.token);
         }
       }
       throw new Error(`Failed to get user settings: ${response.status}`);

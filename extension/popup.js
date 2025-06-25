@@ -4,13 +4,6 @@ import config from './config.js';
 // Use the SERVER_URL from config
 const SERVER_URL = config.SERVER_URL;
 
-// Auth state management
-let authState = {
-  isLoggedIn: false,
-  token: null,
-  user: null
-};
-
 // Helper function to show error messages
 function showError(message) {
   const errorElement = document.getElementById('errorMessage');
@@ -182,24 +175,8 @@ async function fetchDropdownOptions() {
   }
 }
 
-// Cache for user data
-let userDataCache = {
-  data: null,
-  timestamp: null,
-  maxAge: 5 * 60 * 1000 // 5 minutes
-};
-
-// Function to get user data with caching
-async function getUserData(forceRefresh = false) {
-  const now = Date.now();
-  
-  // Return cached data if it's still valid and not forcing refresh
-  if (!forceRefresh && userDataCache.data && userDataCache.timestamp && 
-      (now - userDataCache.timestamp) < userDataCache.maxAge) {
-    console.log('Returning cached user data:', userDataCache.data);
-    return userDataCache.data;
-  }
-  
+// Function to get user data from backend (no caching)
+async function getUserData() {
   try {
     const { token } = await chrome.storage.local.get('token');
     console.log('Token found:', !!token);
@@ -263,19 +240,9 @@ async function getUserData(forceRefresh = false) {
       usage: usageData
     };
     
-    // Update cache
-    userDataCache = {
-      data: combinedData,
-      timestamp: now
-    };
-    
     return combinedData;
   } catch (error) {
     console.error('Error fetching user data:', error);
-    // Return cached data if available, even if expired
-    if (userDataCache.data) {
-      return userDataCache.data;
-    }
     throw error;
   }
 }
@@ -405,7 +372,12 @@ async function updateUI() {
     
   } catch (error) {
     console.error('Error updating UI:', error);
-    showError('Failed to load user data. Please try again.');
+    // If we get an auth error, show the login screen
+    if (error.message.includes('Session expired') || error.message.includes('No authentication token')) {
+      updateUIForAuthState(false);
+    } else {
+      showError('Failed to load user data. Please try again.');
+    }
   }
 }
 
@@ -413,13 +385,14 @@ async function updateUI() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TOKEN_REFRESHED') {
     // Force refresh user data when token is refreshed
-    updateUI(true);
+    updateUI();
   }
 });
 
-// Initialize popup
+// Initialize popup - always fetch fresh data
 document.addEventListener('DOMContentLoaded', () => {
-  updateUI();
+  // First check if user is authenticated, then update UI
+  checkAuth();
 });
 
 // Save settings
@@ -530,45 +503,26 @@ function updateUIForAuthState(isAuthenticated) {
     }
 }
 
-// Authentication
+// Authentication - check with backend
 async function checkAuth() {
     const { token, user } = await chrome.storage.local.get(['token', 'user']);
     
     if (token && user) {
-        // Decode token expiry
-        const payload = decodeJwt(token);
-        const now = Math.floor(Date.now() / 1000);
-        let validToken = true;
-        if (payload && payload.exp && payload.exp < now) {
-            // Token expired, try to refresh
-            try {
-                const response = await fetchWithAuth('/auth/refresh', { method: 'POST' });
-                if (response && response.token) {
-                    await chrome.storage.local.set({ token: response.token });
-                    // Also notify the background script
-                    chrome.runtime.sendMessage({ 
-                        type: 'SESSION_UPDATE', 
-                        jwtToken: response.token,
-                        session: { email: user.email }
-                    });
-                } else {
-                    validToken = false;
-                }
-            } catch (e) {
-                validToken = false;
-            }
-        }
-        if (!validToken) {
-            // Refresh failed, clear storage and show login
+        try {
+            // Try to get user data from backend to verify token is still valid
+            await getUserData();
+            
+            // If we get here, token is valid
+            document.getElementById('userEmail').textContent = user.email;
+            updateUIForAuthState(true);
+            updateUI();
+        } catch (error) {
+            console.error('Token validation failed:', error);
+            // Token is invalid, clear storage and show login
             await chrome.storage.local.remove(['token', 'user']);
             chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
             updateUIForAuthState(false);
-            return;
         }
-        // Token is valid, show user info
-        document.getElementById('userEmail').textContent = user.email;
-        updateUIForAuthState(true);
-        updateUI();
     } else {
         updateUIForAuthState(false);
     }
@@ -669,14 +623,12 @@ document.addEventListener("DOMContentLoaded", function() {
             chrome.tabs.create({ url: "https://lightread.xyz" });
         });
     }
-
-    checkAuth();
 });
 
 // Listen for refresh usage message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'REFRESH_USAGE') {
-    updateUI(true);
+    updateUI();
   }
 });
 
