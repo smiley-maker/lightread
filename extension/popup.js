@@ -179,7 +179,6 @@ async function fetchDropdownOptions() {
 async function getUserData() {
   try {
     const { token } = await chrome.storage.local.get('token');
-    console.log('Token found:', !!token);
     
     if (!token) {
       throw new Error('No authentication token found');
@@ -199,7 +198,6 @@ async function getUserData() {
     }
     
     const limitsData = await limitsResponse.json();
-    console.log('Limits data:', limitsData);
 
     // Then get user settings
     const settingsResponse = await fetch(`${SERVER_URL}/user/settings`, {
@@ -215,7 +213,6 @@ async function getUserData() {
     }
 
     const settingsData = await settingsResponse.json();
-    console.log('Settings data:', settingsData);
 
     // Get today's usage
     const usageResponse = await fetch(`${SERVER_URL}/user/usage`, {
@@ -231,7 +228,6 @@ async function getUserData() {
     }
 
     const usageData = await usageResponse.json();
-    console.log('Usage data:', usageData);
     
     // Combine all data
     const combinedData = {
@@ -250,16 +246,13 @@ async function getUserData() {
 // Function to update UI with user data
 async function updateUI() {
   try {
-    console.log('Updating UI...');
     const userData = await getUserData();
-    console.log('User data received:', userData);
     
     // Update plan information
     const userPlanElement = document.getElementById('userPlan');
     if (userPlanElement) {
       const planType = userData.plan_type || 'Free';
       userPlanElement.textContent = planType;
-      console.log('Updated plan info:', planType);
     }
     
     // Update daily limit
@@ -267,7 +260,6 @@ async function updateUI() {
     if (dailyLimitElement) {
       const limit = userData.daily_summaries || 5;
       dailyLimitElement.textContent = limit;
-      console.log('Updated daily limit:', limit);
     }
 
     // Update max text length
@@ -275,7 +267,6 @@ async function updateUI() {
     if (maxTextLengthElement) {
       const maxLength = userData.max_text_length || 10000;
       maxTextLengthElement.textContent = maxLength;
-      console.log('Updated max text length:', maxLength);
     }
 
     // Update usage display
@@ -288,14 +279,12 @@ async function updateUI() {
       
       usageTextElement.textContent = `${used}/${limit} summaries used today`;
       usageProgressElement.style.width = `${percentage}%`;
-      console.log('Updated usage:', { used, limit, percentage });
     }
 
     // Update settings dropdowns
     if (userData.settings) {
       // Get available options
       const options = await fetchDropdownOptions();
-      console.log('Dropdown options:', options);
 
       // Update summary length dropdown
       const summaryLengthSelect = document.getElementById('summaryLength');
@@ -360,7 +349,6 @@ async function updateUI() {
 
       // Apply theme
       applyTheme(userData.settings.theme);
-      console.log('Updated theme:', userData.settings.theme);
     }
 
     // Show/hide pro-only settings
@@ -369,6 +357,12 @@ async function updateUI() {
     proOnlyElements.forEach(element => {
       element.style.display = isPro ? 'block' : 'none';
     });
+    
+    // Hide upgrade button for pro users
+    const upgradeButton = document.getElementById('upgradeButton');
+    if (upgradeButton) {
+      upgradeButton.style.display = isPro ? 'none' : 'block';
+    }
     
   } catch (error) {
     console.error('Error updating UI:', error);
@@ -384,6 +378,8 @@ async function updateUI() {
 // Listen for token refresh events
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'TOKEN_REFRESHED') {
+    // Show loading while refreshing user data
+    showLoading('Refreshing your data...');
     // Force refresh user data when token is refreshed
     updateUI();
   }
@@ -491,6 +487,10 @@ function updateUIForAuthState(isAuthenticated) {
     const welcomeScreen = document.getElementById('welcomeScreen');
     const authenticatedContent = document.getElementById('authenticatedContent');
     const loginForm = document.getElementById('loginForm');
+    const loadingContainer = document.getElementById('loadingContainer');
+    
+    // Hide loading first
+    loadingContainer.style.display = 'none';
     
     if (isAuthenticated) {
         welcomeScreen.style.display = 'none';
@@ -503,8 +503,25 @@ function updateUIForAuthState(isAuthenticated) {
     }
 }
 
+// Show loading state
+function showLoading(message = 'Loading your data...') {
+    const loadingContainer = document.getElementById('loadingContainer');
+    const welcomeScreen = document.getElementById('welcomeScreen');
+    const authenticatedContent = document.getElementById('authenticatedContent');
+    const loginForm = document.getElementById('loginForm');
+    const loadingText = loadingContainer.querySelector('.loading-text');
+    
+    loadingContainer.style.display = 'flex';
+    loadingText.textContent = message;
+    welcomeScreen.style.display = 'none';
+    authenticatedContent.style.display = 'none';
+    loginForm.style.display = 'none';
+}
+
 // Authentication - check with backend
 async function checkAuth() {
+    showLoading('Checking authentication...');
+    
     const { token, user } = await chrome.storage.local.get(['token', 'user']);
     
     if (token && user) {
@@ -552,8 +569,9 @@ document.getElementById('loginSubmitButton').addEventListener('click', async () 
     }
 
     try {
-        document.getElementById('loginSubmitButton').disabled = true;
-        document.getElementById('loginSubmitButton').textContent = 'Logging in...';
+        const loginButton = document.getElementById('loginSubmitButton');
+        loginButton.disabled = true;
+        loginButton.textContent = 'Logging in...';
         
         const response = await fetch(`${SERVER_URL}/auth/login`, {
             method: 'POST',
@@ -583,12 +601,15 @@ document.getElementById('loginSubmitButton').addEventListener('click', async () 
             session: { email }
         });
 
+        // Show loading while checking auth and updating UI
+        showLoading('Logging you in...');
         checkAuth();
     } catch (error) {
         loginError.textContent = error.message || 'Login failed. Please try again.';
     } finally {
-        document.getElementById('loginSubmitButton').disabled = false;
-        document.getElementById('loginSubmitButton').textContent = 'Login';
+        const loginButton = document.getElementById('loginSubmitButton');
+        loginButton.disabled = false;
+        loginButton.textContent = 'Login';
     }
 });
 
@@ -605,6 +626,8 @@ document.getElementById('logoutButton').addEventListener('click', async () => {
         // Notify background script
         chrome.runtime.sendMessage({ type: 'SESSION_CLEAR' });
         
+        // Show loading while updating UI
+        showLoading('Logging you out...');
         checkAuth();
     } catch (error) {
         console.error('Error during logout:', error);
@@ -628,6 +651,8 @@ document.addEventListener("DOMContentLoaded", function() {
 // Listen for refresh usage message
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'REFRESH_USAGE') {
+    // Show loading while refreshing usage data
+    showLoading('Updating usage...');
     updateUI();
   }
 });

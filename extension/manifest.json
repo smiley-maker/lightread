@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LightRead",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Instantly summarize any text on the web with AI. Perfect for news articles, research, and blog posts. Get to the point — fast.",
   "permissions": [
     "contextMenus",
