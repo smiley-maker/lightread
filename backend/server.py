@@ -153,7 +153,7 @@ def login():
             token = jwt.encode({
                 'sub': auth_response.user.id,
                 'iat': datetime.utcnow(),
-                'exp': datetime.utcnow() + timedelta(days=1)
+                'exp': datetime.utcnow() + timedelta(days=7)
             }, JWT_SECRET, algorithm=JWT_ALGORITHM)
             
             return jsonify({
@@ -174,7 +174,7 @@ def refresh_token(current_user):
         token = jwt.encode({
             'sub': current_user,
             'iat': datetime.utcnow(),
-            'exp': datetime.utcnow() + timedelta(days=1)
+            'exp': datetime.utcnow() + timedelta(days=7)
         }, JWT_SECRET, algorithm=JWT_ALGORITHM)
         
         return jsonify({
