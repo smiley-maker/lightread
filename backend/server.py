@@ -53,7 +53,7 @@ if not gemini_api_key:
 else:
     try:
         genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('models/gemini-2.0-flash-latest')  # Updated to Gemini 1.5 Flash
+        model = genai.GenerativeModel('models/gemini-2.0-flash')  # Updated to Gemini 1.5 Flash
         print("Successfully initialized Gemini API")
     except Exception as e:
         print(f"Error configuring Gemini API: {e}")
@@ -304,7 +304,7 @@ def initialize_gemini():
         genai.configure(api_key=gemini_api_key)
         
         # Initialize model
-        model = genai.GenerativeModel('models/gemini-2.0-flash-latest')  # Updated to Gemini 1.5 Flash
+        model = genai.GenerativeModel('models/gemini-2.0-flash')  # Updated to Gemini 1.5 Flash
         
         # Test the model with a simple prompt
         response = model.generate_content("Test connection")
