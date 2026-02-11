@@ -113,7 +113,7 @@ const PlanSelection = ({ user, onComplete }) => {
             </div>
             <ul className="plan-features">
               <li>Text summarization of highlighted text</li>
-              <li>Up to 10 summaries/day</li>
+              <li>Up to 5 summaries/day</li>
               <li>Popup display for easy viewing</li>
               <li>Copy to clipboard</li>
             </ul>
@@ -135,7 +135,7 @@ const PlanSelection = ({ user, onComplete }) => {
               </div>
             </div>
             <ul className="plan-features">
-              <li>Unlimited summaries</li>
+              <li>Up to 30 summaries/day</li>
               <li>Summary history</li>
               <li>Adjustable lengths</li>
               <li>Tone, style, & difficulty options</li>

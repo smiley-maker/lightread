@@ -366,7 +366,7 @@ const Billing = () => {
               </div>
               <ul className="plan-card-features">
                 <li><span className="plan-check">✔</span> Summarization of highlighted text</li>
-                <li><span className="plan-check">✔</span> Up to 10 summaries/day</li>
+                <li><span className="plan-check">✔</span> Up to 5 summaries/day</li>
                 <li><span className="plan-check">✔</span> Popup display for easy viewing</li>
                 <li><span className="plan-check">✔</span> Copy to clipboard</li>
               </ul>
@@ -385,7 +385,7 @@ const Billing = () => {
                 <span className="plan-card-period">/month</span>
               </div>
               <ul className="plan-card-features">
-                <li><span className="plan-check">✔</span> Unlimited summaries</li>
+                <li><span className="plan-check">✔</span> Up to 30 summaries/day</li>
                 <li><span className="plan-check">✔</span> Summary history</li>
                 <li><span className="plan-check">✔</span> Adjustable lengths</li>
                 <li><span className="plan-check">✔</span> Tone, style, & difficulty options</li>
@@ -489,7 +489,7 @@ const Billing = () => {
               <div className="subscription-info-card">
                 <h3>Free Plan Details</h3>
                 <p>You are currently on the Free plan.</p>
-                <p>Upgrade to Pro to unlock unlimited summaries and advanced features!</p>
+                <p>Upgrade to Pro to unlock 30 summaries per day and advanced features!</p>
               </div>
             )}
 
@@ -501,11 +501,11 @@ const Billing = () => {
               </div>
               <div className="faq-item">
                 <h4>What happens when I cancel my subscription?</h4>
-                <p>When you cancel your Pro subscription, you'll maintain access to all Pro features until the end of your current billing period. After that, you'll automatically be switched to the Free plan, which includes 10 summaries per day and basic features.</p>
+                <p>When you cancel your Pro subscription, you'll maintain access to all Pro features until the end of your current billing period. After that, you'll automatically be switched to the Free plan, which includes 5 summaries per day and basic features.</p>
               </div>
               <div className="faq-item">
                 <h4>Can I change my subscription plan?</h4>
-                <p>Yes! You can upgrade to Pro at any time to get unlimited summaries and advanced features. If you're on the Pro plan, you can downgrade to Free at any time, and your Pro features will remain active until the end of your current billing period.</p>
+                <p>Yes! You can upgrade to Pro at any time to get 30 summaries per day and advanced features. If you're on the Pro plan, you can downgrade to Free at any time, and your Pro features will remain active until the end of your current billing period.</p>
               </div>
               <div className="faq-item">
                 <h4>How secure is my payment information?</h4>

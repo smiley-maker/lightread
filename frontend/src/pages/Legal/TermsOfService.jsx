@@ -59,7 +59,19 @@ const TermsOfService = () => {
         </section>
 
         <section>
-          <h2>6. Service Limitations</h2>
+          <h2>6. Subscription and Billing</h2>
+          <p>LightRead offers both Free and Pro subscription tiers:</p>
+          <ul>
+            <li>Pro subscriptions are billed monthly at $5.00 per month</li>
+            <li>Subscriptions automatically renew each billing period unless cancelled</li>
+            <li>Payment is processed securely through Stripe</li>
+            <li>You may cancel your subscription at any time through your account dashboard</li>
+          </ul>
+          <p><strong>Cancellation Policy:</strong> When you cancel your Pro subscription, you will retain access to Pro features until the end of your current billing period. You will not be charged again, and your account will automatically downgrade to the Free plan. For full details about cancellation, billing periods, refunds, and resubscribing, please see our <Link to="/cancellation-policy">Cancellation Policy</Link>.</p>
+        </section>
+
+        <section>
+          <h2>7. Service Limitations and Availability</h2>
           <p>LightRead reserves the right to:</p>
           <ul>
             <li>Impose usage limits based on user subscription tier</li>
@@ -67,16 +79,24 @@ const TermsOfService = () => {
             <li>Update these terms of service with reasonable notice</li>
             <li>Terminate accounts that violate these terms</li>
           </ul>
+          <p><strong>No Guarantee of Uptime or Availability:</strong> LightRead is provided "as-is" with no guarantee of continuous availability, uptime, or uninterrupted service. The service may experience:</p>
+          <ul>
+            <li>Temporary or permanent outages</li>
+            <li>Technical issues or degraded performance</li>
+            <li>Scheduled or unscheduled maintenance</li>
+            <li>API integration issues with third-party services</li>
+          </ul>
+          <p>We are not liable for any service interruptions, and no refunds will be provided for temporary outages or technical issues, except as outlined in our Cancellation Policy.</p>
         </section>
 
         <section>
-          <h2>7. Intellectual Property</h2>
+          <h2>8. Intellectual Property</h2>
           <p>Users retain ownership of their original content. However, by using our service, you grant LightRead the necessary rights to process your content for summarization purposes. The LightRead extension, website, and brand assets remain the exclusive property of LightRead.</p>
           <p>LightRead's source code is open source and available for review on GitHub. While the code is publicly accessible, it remains subject to the license terms specified in our repository. The open-source nature of our code reflects our commitment to transparency and community collaboration.</p>
         </section>
 
         <section>
-          <h2>8. Limitation of Liability</h2>
+          <h2>9. Limitation of Liability</h2>
           <p>LightRead provides the service "as is" and makes no warranties, express or implied. We are not liable for:</p>
           <ul>
             <li>Accuracy of AI-generated summaries</li>
@@ -87,17 +107,29 @@ const TermsOfService = () => {
         </section>
 
         <section>
-          <h2>9. Changes to Terms</h2>
+          <h2>10. Service Discontinuation</h2>
+          <p>LightRead reserves the right to discontinue or modify the service at any time, with or without notice. In the event of permanent service discontinuation:</p>
+          <ul>
+            <li>Active Pro subscribers will receive a full refund for any unused portion of their subscription</li>
+            <li>Users will be given reasonable notice (at least 30 days when possible) to export their saved data</li>
+            <li>All data will be permanently deleted following the discontinuation period</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>11. Changes to Terms</h2>
           <p>We may update these terms from time to time. Continued use of LightRead after such changes constitutes acceptance of the new terms. Users will be notified of significant changes.</p>
         </section>
 
         <section>
-          <h2>10. Contact Us</h2>
-          <p>If you have any questions about these Terms of Service, please contact us at support@lightread.app</p>
+          <h2>12. Contact Us</h2>
+          <p>If you have any questions about these Terms of Service, please contact us at jordan.sinclair@du.edu</p>
         </section>
 
         <div className="legal-footer">
           <Link to="/privacy">View Privacy Policy</Link>
+          {' | '}
+          <Link to="/cancellation-policy">View Cancellation Policy</Link>
         </div>
       </div>
     </div>

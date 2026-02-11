@@ -1,5 +1,5 @@
 import os
-import google.generativeai as genai
+from google import genai
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from flask_cors import CORS
@@ -47,17 +47,16 @@ app.register_blueprint(stripe_api, url_prefix='/api')
 
 # Configure Gemini API
 gemini_api_key = os.getenv("GEMINI_API_KEY")
+gemini_client = None
 if not gemini_api_key:
     print("Warning: GEMINI_API_KEY not found in environment variables")
-    model = None
 else:
     try:
-        genai.configure(api_key=gemini_api_key)
-        model = genai.GenerativeModel('models/gemini-2.0-flash')  # Updated to Gemini 1.5 Flash
-        print("Successfully initialized Gemini API")
+        gemini_client = genai.Client(api_key=gemini_api_key)
+        print("Successfully initialized Gemini API client")
     except Exception as e:
         print(f"Error configuring Gemini API: {e}")
-        model = None
+        gemini_client = None
 
 # JWT configuration
 JWT_ALGORITHM = "HS256"
@@ -220,7 +219,7 @@ def get_user_limits(user_id):
                 },
                 'pro': {
                     'max_text_length': 50000,  # 50k characters
-                    'daily_summaries': 50      # 50 summaries per day
+                    'daily_summaries': 30      # 30 summaries per day
                 },
                 'enterprise': {
                     'max_text_length': 100000, # 100k characters
@@ -300,29 +299,29 @@ def initialize_gemini():
         if not gemini_api_key:
             raise ValueError("GEMINI_API_KEY not found in environment variables")
             
-        # Ensure API is configured
-        genai.configure(api_key=gemini_api_key)
+        # Initialize client
+        client = genai.Client(api_key=gemini_api_key)
         
-        # Initialize model
-        model = genai.GenerativeModel('models/gemini-2.0-flash')  # Updated to Gemini 1.5 Flash
-        
-        # Test the model with a simple prompt
-        response = model.generate_content("Test connection")
+        # Test the client with a simple prompt
+        response = client.models.generate_content(
+            model='gemini-2.5-flash-lite',
+            contents='Test connection'
+        )
         if not response or not response.text:
             raise Exception("Failed to get response from Gemini API")
             
-        return model
+        return client
     except Exception as e:
         print(f"Error initializing Gemini: {str(e)}")
         raise
 
-# Initialize Gemini model
+# Initialize Gemini client
 try:
-    model = initialize_gemini()
-    print("Successfully initialized Gemini model with test connection")
+    gemini_client = initialize_gemini()
+    print("Successfully initialized Gemini client with test connection")
 except Exception as e:
     print(f"Failed to initialize Gemini after retries: {str(e)}")
-    model = None
+    gemini_client = None
 
 @app.route('/summarize', methods=['POST'])
 @token_required
@@ -397,7 +396,7 @@ def summarize_text(current_user):
             }), 403
 
         # Generate summary using Gemini
-        if not model:
+        if not gemini_client:
             return jsonify({
                 "error": "Summarization service is not available. Please check server configuration."
             }), 503
@@ -425,7 +424,10 @@ Text to summarize:
         # Generate summary with retry logic
         @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
         def generate_summary(prompt):
-            response = model.generate_content(prompt)
+            response = gemini_client.models.generate_content(
+                model='gemini-2.0-flash-exp',
+                contents=prompt
+            )
             if not response or not response.text:
                 raise Exception("Empty response from Gemini")
                 

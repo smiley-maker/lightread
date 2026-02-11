@@ -105,7 +105,7 @@ const Dashboard = () => {
                   setSubscriptionUpdated(true);
                   
                   if (data.plan_type === 'pro') {
-                    setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
+                    setSubscriptionMessage('You are now a Pro user! Enjoy 30 summaries per day and more features.');
                   } else {
                     // Manual refresh if the plan type isn't updated yet
                     setSubscriptionMessage('Payment successful! Refreshing subscription status...');
@@ -114,7 +114,7 @@ const Dashboard = () => {
                     setTimeout(async () => {
                       const { data: refreshedData } = await getUserSubscription(user.id);
                       if (refreshedData && refreshedData.plan_type === 'pro') {
-                        setSubscriptionMessage('You are now a Pro user! Enjoy unlimited summaries and more features.');
+                        setSubscriptionMessage('You are now a Pro user! Enjoy 30 summaries per day and more features.');
                       } else {
                         setSubscriptionMessage('Your payment was successful but your subscription might take a moment to update. Please refresh the page in a few minutes.');
                       }

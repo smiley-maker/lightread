@@ -136,11 +136,13 @@ const PrivacyPolicy = () => {
 
         <section>
           <h2>12. Contact Us</h2>
-          <p>If you have questions about our Privacy Policy or your data, please contact us at jrscolorado15@gmail.com</p>
+          <p>If you have questions about our Privacy Policy or your data, please contact us at jordan.sinclair@du.edu</p>
         </section>
 
         <div className="legal-footer">
           <Link to="/terms">View Terms of Service</Link>
+          {' | '}
+          <Link to="/cancellation-policy">View Cancellation Policy</Link>
         </div>
       </div>
     </div>

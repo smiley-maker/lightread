@@ -260,7 +260,7 @@ const App = () => {
                   </div>
                   <ul className="plan-card-features">
                     <li><span className="plan-check">✔</span> Text summarization of highlighted text.</li>
-                    <li><span className="plan-check">✔</span> Up to 10 summaries/day.</li>
+                    <li><span className="plan-check">✔</span> Up to 5 summaries/day.</li>
                     <li><span className="plan-check">✔</span> Popup display for easy viewing.</li>
                     <li><span className="plan-check">✔</span> Copy to clipboard.</li>
                   </ul>
@@ -273,7 +273,7 @@ const App = () => {
                     <span className="plan-card-period">/month</span>
                   </div>
                   <ul className="plan-card-features">
-                    <li><span className="plan-check">✔</span> Unlimited summaries.</li>
+                    <li><span className="plan-check">✔</span> Up to 30 summaries/day.</li>
                     <li><span className="plan-check">✔</span> Summary history.</li>
                     <li><span className="plan-check">✔</span> Adjustable lengths.</li>
                     <li><span className="plan-check">✔</span> Tone, style, & difficulty options.</li>
@@ -313,6 +313,7 @@ const App = () => {
                   <a href="#pricing" onClick={handleNavLinkClick}>pricing</a>
                   <a href="/terms">terms of use</a>
                   <a href="/privacy">privacy policy</a>
+                  <a href="/cancellation-policy">cancellation policy</a>
                 </div>
               </div>
               <div className="footer-bottom">

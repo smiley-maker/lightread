@@ -11,6 +11,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import Dashboard from './pages/Dashboard/Dashboard.jsx'
 import TermsOfService from './pages/Legal/TermsOfService'
 import PrivacyPolicy from './pages/Legal/PrivacyPolicy'
+import CancellationPolicy from './pages/Legal/CancellationPolicy'
 import DashboardLayout from './components/Dashboard/DashboardLayout.jsx'
 import Summaries from './pages/Dashboard/Summaries.jsx'
 import Settings from './pages/Dashboard/Settings.jsx'
@@ -33,6 +34,7 @@ import EmailVerification from './pages/EmailVerification.jsx'
  *   - /feedback: Feedback form
  * - /terms: Terms of Service
  * - /privacy: Privacy Policy
+ * - /cancellation-policy: Cancellation Policy
  * - /verify-email: Email verification page
  */
 const router = createBrowserRouter([
@@ -81,6 +83,10 @@ const router = createBrowserRouter([
   {
     path: '/privacy',
     element: <PrivacyPolicy />,
+  },
+  {
+    path: '/cancellation-policy',
+    element: <CancellationPolicy />,
   }
 ])
 
