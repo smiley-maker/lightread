@@ -1,6 +1,6 @@
 Flask
 flask_cors
-google-generativeai
+google-genai
 python-dotenv
 supabase
 stripe
