@@ -13,7 +13,7 @@ const CancellationPolicy = () => {
       </div>
       <div className="legal-container">
         <h1>Cancellation Policy</h1>
-        <p className="last-updated">Last Updated: {new Date().toLocaleDateString()}</p>
+        <p className="last-updated">Last Updated: February 11, 2026</p>
 
         <section>
           <h2>1. Overview</h2>

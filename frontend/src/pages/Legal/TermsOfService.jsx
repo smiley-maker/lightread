@@ -13,7 +13,7 @@ const TermsOfService = () => {
       </div>
       <div className="legal-container">
         <h1>Terms of Service</h1>
-        <p className="last-updated">Last Updated: {new Date().toLocaleDateString()}</p>
+        <p className="last-updated">Last Updated: February 11, 2026</p>
 
         <section>
           <h2>1. Acceptance of Terms</h2>
