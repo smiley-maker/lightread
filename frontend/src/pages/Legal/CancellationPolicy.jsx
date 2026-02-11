@@ -44,12 +44,7 @@ const CancellationPolicy = () => {
 
         <section>
           <h2>4. Billing Period Details</h2>
-          <p>LightRead Pro subscriptions are billed on a monthly basis:</p>
-          <ul>
-            <li><strong>Monthly Plan:</strong> LightRead Pro subscriptions are billed monthly at the price shown at checkout.</li>
-            <li><strong>Billing Cycle:</strong> Your billing period starts on the date you subscribe and renews monthly on that same date.</li>
-            <li><strong>Pro-rata Refunds:</strong> We do not offer pro-rata refunds for partial months. When you cancel, you retain access until the end of your paid billing period.</li>
-          </ul>
+          <p>LightRead Pro subscriptions are billed monthly and renew automatically unless canceled. Your billing period starts on the date you subscribe and renews monthly on that same date. We do not offer prorated refunds for partial months; when you cancel, you retain access until the end of your paid billing period.</p>  
         </section>
 
         <section>
@@ -83,10 +78,10 @@ const CancellationPolicy = () => {
 
         <section>
           <h2>7. Refund Policy</h2>
-          <p>Subscription fees are non-refundable and we do not provide prorated refunds. We may issue refunds at our sole discretion in cases of billing errors, unauthorized charges, or prolonged service outages.</p>
+          <p>Subscription fees are non-refundable and we do not provide prorated refunds. We may issue a refund at our sole discretion in cases such as billing errors, unauthorized charges, or prolonged service unavailability.</p>
           <ul>
-            <li>If you experience technical issues that prevent you from using the service, please contact jordan.sinclair@du.edu and we may work with you to resolve the issue.</li>
-            <li>In cases of billing errors or unauthorized charges, we may investigate and provide appropriate remedies.</li>
+            <li>If you experience technical issues that prevent you from using the service, please contact us and we will work to resolve the issue.</li>
+            <li>If you believe there was a billing error or unauthorized charge, contact us promptly so we can investigate.</li>
             <li>We do not offer refunds for partial subscription periods.</li>
           </ul>
         </section>
